@@ -44,7 +44,7 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 		defender_hp += float(side["stacks"][uid]["alive_hp"])
 	var seed_unit := "corvette_asw" if side["roster"].has("corvette_asw") else "gunboat"
 	var udef: Dictionary = catalog.units.get(seed_unit, {})
-	var threat_scale: float = max(1.3, float(level.get("enemy_income_base", 12.0)) / 12.0)
+	var threat_scale: float = max(1.6, float(level.get("enemy_income_base", 12.0)) / 12.0)
 	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0 * threat_scale
 	if defender_hp < seed_target and side["roster"].has(seed_unit):
 		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
@@ -61,16 +61,28 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 ## saves up for it instead of skipping to something cheaper — otherwise
 ## expensive/rare slots (submarines, flagships) are perpetually crowded
 ## out by whatever's cheap and never get bought at all.
+##
+## Upgrades are the exception: they are bought opportunistically (only
+## when gold comfortably exceeds the cost) instead of through the credit
+## rotation. Their exponentially-growing prices otherwise stall military
+## production for dozens of ticks while the side banks gold — the stall,
+## not the upgrade, ends up deciding matches.
+const UPGRADE_HEADROOM := 1.5
+
 static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Dictionary, tick: int, priority: Array) -> void:
+	for item in ["INCOME", "INSTALLMENT"]:
+		if item in priority and _purchasable(side, catalog, item) and side["gold"] >= _upgrade_cost(side, economy, item) * UPGRADE_HEADROOM:
+			_execute_buy(side, catalog, economy, tick, item)
 	var credit: Dictionary = side.get("_credit", {})
-	for item in priority:
+	var units: Array = priority.filter(func(i): return i != "INCOME" and i != "INSTALLMENT")
+	for item in units:
 		credit[item] = float(credit.get(item, 0.0)) + 1.0
 	var attempts := 0
 	while attempts < MAX_WEIGHTED_BUYS_PER_DECISION:
 		attempts += 1
 		var best := ""
 		var best_credit := -1.0
-		for item in priority:
+		for item in units:
 			if float(credit.get(item, 0.0)) > best_credit and _purchasable(side, catalog, item):
 				best = item
 				best_credit = credit[item]
@@ -79,6 +91,11 @@ static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Diction
 		_execute_buy(side, catalog, economy, tick, best)
 		credit[best] = 0.0
 	side["_credit"] = credit
+
+static func _upgrade_cost(side: Dictionary, economy: Dictionary, item: String) -> float:
+	var cfg: Dictionary = economy["income_upgrade"] if item == "INCOME" else economy["installment_upgrade"]
+	var level: int = int(side["income_level"]) if item == "INCOME" else int(side["installment_level"])
+	return float(cfg["cost_base"]) * pow(float(cfg["cost_growth"]), level)
 
 ## Whether the item is a valid purchase target at all (in roster / upgrade
 ## not maxed) — independent of current gold, so the scheduler can decide
