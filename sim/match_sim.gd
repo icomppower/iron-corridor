@@ -19,6 +19,14 @@ static func run(level: Dictionary, catalog: Catalog, player_strategy_id: String,
 	var enemy := _new_side(level["enemy_roster"], float(level["enemy_base_hp"]), 0.0)
 	enemy["base_hp_max"] = float(level["enemy_base_hp"])
 
+	# Enemy task-force readiness varies run to run (seeded, so replays are
+	# still deterministic). Without this the sim is near-deterministic per
+	# (level, strategy) matchup: win rates saturate to 0/1 and every
+	# difficulty knob becomes a chaotic cliff instead of a smooth curve.
+	enemy["gold"] = float(level.get("enemy_starting_gold", 0.0)) * rng.randf_range(0.5, 1.5)
+	var enemy_income_jitter: float = rng.randf_range(0.85, 1.15)
+	var enemy_income: float = float(level["enemy_income_base"]) * enemy_income_jitter
+
 	var weather_id: String = rng.pick_weighted(level["weather_table"])
 	var weather_table: Dictionary = catalog.weather
 
@@ -39,7 +47,7 @@ static func run(level: Dictionary, catalog: Catalog, player_strategy_id: String,
 
 		# --- income ---
 		player["gold"] += _effective_income(player, float(economy["income_base"]), economy) * DT
-		enemy["gold"] += _effective_income(enemy, float(level["enemy_income_base"]), economy) * DT
+		enemy["gold"] += _effective_income(enemy, enemy_income, economy) * DT
 
 		# --- era evolution ---
 		_check_era_upgrade(player, catalog)

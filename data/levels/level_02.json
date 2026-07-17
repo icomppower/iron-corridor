@@ -44,5 +44,6 @@
     "destroyer",
     "submarine_shallow",
     "INCOME"
-  ]
+  ],
+  "enemy_starting_gold": 50.0
 }

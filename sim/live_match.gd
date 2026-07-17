@@ -26,6 +26,7 @@ var result: String = ""
 var boss_killed: bool = false
 var enemy_strategy_id: String = "level_ai"
 var _flagship_aim_bonus: float = 0.0
+var _enemy_income: float = 0.0
 
 func _init(p_level: Dictionary, p_catalog: Catalog, seed_value: int, unlocked_skills: Array = []) -> void:
 	level = p_level
@@ -36,6 +37,9 @@ func _init(p_level: Dictionary, p_catalog: Catalog, seed_value: int, unlocked_sk
 	player["unlocked_skills"] = unlocked_skills.duplicate()
 	enemy = MatchSim._new_side(level["enemy_roster"], float(level["enemy_base_hp"]), 0.0)
 	enemy["base_hp_max"] = float(level["enemy_base_hp"])
+	# Mirror MatchSim.run(): seeded enemy readiness jitter.
+	enemy["gold"] = float(level.get("enemy_starting_gold", 0.0)) * rng.randf_range(0.5, 1.5)
+	_enemy_income = float(level["enemy_income_base"]) * rng.randf_range(0.85, 1.15)
 	weather_id = rng.pick_weighted(level["weather_table"])
 	turn_budget = int(level["turn_budget"])
 	boss_trigger_hp = float(level["enemy_base_hp"]) * float(level["boss_trigger_hp_pct"])
@@ -52,7 +56,7 @@ func step() -> void:
 		return
 
 	player["gold"] += MatchSim._effective_income(player, float(economy["income_base"]), economy)
-	enemy["gold"] += MatchSim._effective_income(enemy, float(level["enemy_income_base"]), economy)
+	enemy["gold"] += MatchSim._effective_income(enemy, _enemy_income, economy)
 
 	MatchSim._check_era_upgrade(player, catalog)
 	MatchSim._check_era_upgrade(enemy, catalog)
