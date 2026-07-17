@@ -2,7 +2,7 @@
   "id": "level_05",
   "name": "Iron Corridor",
   "turn_budget": 420,
-  "enemy_income_base": 14.8,
+  "enemy_income_base": 15.4,
   "enemy_base_hp": 1800,
   "player_base_hp": 770,
   "enemy_roster": [
@@ -54,5 +54,5 @@
     "INSTALLMENT",
     "battleship_flagship"
   ],
-  "enemy_starting_gold": 190.0
+  "enemy_starting_gold": 205.0
 }
