@@ -40,6 +40,18 @@ func _initialize() -> void:
 	_check_economy_curve(data, catalog)
 	_check_depth_layer_relevance(data, catalog)
 
+	print("\n===== WIN RATE TABLE =====")
+	for level in catalog.levels:
+		var level_id: String = level["id"]
+		var strat_map: Dictionary = data["level_strategy_stats"][level_id]
+		var parts := []
+		var sum := 0.0
+		for strat in ["rush", "eco", "turtle", "mixed"]:
+			var wr: float = float(strat_map[strat]["win_rate"])
+			sum += wr
+			parts.append("%s=%.2f" % [strat, wr])
+		print("  %s avg=%.3f  %s" % [level_id, sum / 4.0, "  ".join(parts)])
+
 	print("\n===== ORACLE REPORT =====")
 	for p in passes:
 		print("  PASS  %s" % p)

@@ -67,7 +67,13 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 ## rotation. Their exponentially-growing prices otherwise stall military
 ## production for dozens of ticks while the side banks gold — the stall,
 ## not the upgrade, ends up deciding matches.
+##
+## Saving is also bounded: a side only holds gold for an item already
+## within SAVE_REACH of its balance. Unbounded saving froze every list
+## containing an expensive unit for its full price, which made cheap-only
+## rotations structurally dominant regardless of unit stats.
 const UPGRADE_HEADROOM := 1.5
+const SAVE_REACH := 150.0
 
 static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Dictionary, tick: int, priority: Array) -> void:
 	for item in ["INCOME", "INSTALLMENT"]:
@@ -80,16 +86,28 @@ static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Diction
 	var attempts := 0
 	while attempts < MAX_WEIGHTED_BUYS_PER_DECISION:
 		attempts += 1
-		var best := ""
-		var best_credit := -1.0
-		for item in units:
-			if float(credit.get(item, 0.0)) > best_credit and _purchasable(side, catalog, item):
-				best = item
-				best_credit = credit[item]
-		if best == "" or not _affordable(side, catalog, economy, best):
+		var ranked := units.filter(func(i): return _purchasable(side, catalog, i))
+		ranked.sort_custom(func(a, b): return float(credit.get(a, 0.0)) > float(credit.get(b, 0.0)))
+		if ranked.is_empty():
 			break
-		_execute_buy(side, catalog, economy, tick, best)
-		credit[best] = 0.0
+		var top: String = ranked[0]
+		if _affordable(side, catalog, economy, top):
+			_execute_buy(side, catalog, economy, tick, top)
+			credit[top] = 0.0
+			continue
+		if MatchSim.spawn_cost(side, catalog, top, economy) <= float(side["gold"]) + SAVE_REACH:
+			break # close enough — hold gold and save for it
+		# Top item is far out of reach: keep the economy flowing with the
+		# next-most-overdue affordable item instead of freezing.
+		var bought := false
+		for item in ranked.slice(1):
+			if _affordable(side, catalog, economy, item):
+				_execute_buy(side, catalog, economy, tick, item)
+				credit[item] = 0.0
+				bought = true
+				break
+		if not bought:
+			break
 	side["_credit"] = credit
 
 static func _upgrade_cost(side: Dictionary, economy: Dictionary, item: String) -> float:
