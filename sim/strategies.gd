@@ -16,7 +16,7 @@ static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, leve
 		"eco":
 			_eco(side, catalog, level, economy, tick)
 		"turtle":
-			_spend_weighted(side, catalog, economy, tick, ["destroyer", "destroyer", "corvette_asw", "flak_cruiser"])
+			_spend_weighted(side, catalog, economy, tick, ["destroyer", "corvette_asw", "flak_cruiser"])
 		"mixed":
 			_spend_weighted(side, catalog, economy, tick, ["corvette_asw", "destroyer", "flak_cruiser", "submarine_shallow", "hovercraft", "minelayer", "INCOME", "battleship_flagship", "carrier"])
 		"level_ai":
@@ -44,7 +44,7 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 		defender_hp += float(side["stacks"][uid]["alive_hp"])
 	var seed_unit := "corvette_asw" if side["roster"].has("corvette_asw") else "gunboat"
 	var udef: Dictionary = catalog.units.get(seed_unit, {})
-	var threat_scale: float = max(1.0, float(level.get("enemy_income_base", 12.0)) / 12.0)
+	var threat_scale: float = max(1.3, float(level.get("enemy_income_base", 12.0)) / 12.0)
 	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0 * threat_scale
 	if defender_hp < seed_target and side["roster"].has(seed_unit):
 		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
