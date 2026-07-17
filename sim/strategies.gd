@@ -53,11 +53,11 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 	if defender_hp < seed_target and side["roster"].has(seed_unit):
 		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
 		return
-	# Payoff phase: once INCOME/INSTALLMENT max out the fair-share credit
-	# flows into heavy units bought at full discount — eco's identity is
-	# a slow start that converts into a late-game hammer, not a wall that
-	# survives on gunboats and never closes.
-	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "destroyer", "corvette_asw", "battleship_flagship"])
+	# Payoff phase: eco fields the same corvette/flak military as turtle
+	# but detours through INCOME/INSTALLMENT first — a turtle that banks.
+	# The upgrade detour is its early-game cost; the compounding economy
+	# is what closes matches turtle's flat flow cannot.
+	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "corvette_asw", "flak_cruiser"])
 
 ## Fair-share purchase scheduler: every priority item accrues "credit" each
 ## decision call, and we always spend on the most-overdue item. If the
