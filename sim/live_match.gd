@@ -27,12 +27,13 @@ var boss_killed: bool = false
 var enemy_strategy_id: String = "level_ai"
 var _flagship_aim_bonus: float = 0.0
 
-func _init(p_level: Dictionary, p_catalog: Catalog, seed_value: int) -> void:
+func _init(p_level: Dictionary, p_catalog: Catalog, seed_value: int, unlocked_skills: Array = []) -> void:
 	level = p_level
 	catalog = p_catalog
 	economy = catalog.economy
 	rng = IronRNG.new(seed_value)
 	player = MatchSim._new_side(level["player_roster"], float(level["player_base_hp"]), float(economy["starting_gold"]))
+	player["unlocked_skills"] = unlocked_skills.duplicate()
 	enemy = MatchSim._new_side(level["enemy_roster"], float(level["enemy_base_hp"]), 0.0)
 	enemy["base_hp_max"] = float(level["enemy_base_hp"])
 	weather_id = rng.pick_weighted(level["weather_table"])

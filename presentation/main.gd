@@ -14,11 +14,14 @@ var live: LiveMatch
 var camera_rig: CameraRig
 var ships: ShipVisuals
 var ui: GameUI
+var skill_state: Dictionary
 var _accum := 0.0
 var _running := true
+var _awarded_this_match := false
 
 func _ready() -> void:
 	catalog = Catalog.load_from("res://")
+	skill_state = SkillProgress.load_state()
 	_setup_world()
 	_setup_camera()
 	ships = ShipVisuals.new()
@@ -30,15 +33,23 @@ func _ready() -> void:
 	ui.installment_requested.connect(_on_installment_requested)
 	ui.flagship_fire_requested.connect(_on_flagship_fire)
 	ui.restart_requested.connect(_start_new_match)
+	ui.skill_unlock_requested.connect(_on_skill_unlock_requested)
+	ui.refresh_skills(catalog, skill_state)
 	_start_new_match()
 
 func _start_new_match() -> void:
 	var level: Dictionary = catalog.levels_by_id[LEVEL_ID]
 	var seed_value := randi_range(PLAYER_STRATEGY_SEED_MIN, PLAYER_STRATEGY_SEED_MAX)
-	live = LiveMatch.new(level, catalog, seed_value)
+	live = LiveMatch.new(level, catalog, seed_value, skill_state.get("unlocked", []))
 	ui.build_bar_for_roster(level["player_roster"], catalog)
 	_running = true
 	_accum = 0.0
+	_awarded_this_match = false
+
+func _on_skill_unlock_requested(skill_id: String) -> void:
+	if SkillProgress.unlock(skill_state, catalog, skill_id):
+		SkillProgress.save_state(skill_state)
+		ui.refresh_skills(catalog, skill_state)
 
 func _process(delta: float) -> void:
 	if _running and live != null:
@@ -52,6 +63,11 @@ func _process(delta: float) -> void:
 				break
 		ships.sync(live, catalog)
 		ui.sync(live)
+		if live.is_over() and not _awarded_this_match:
+			_awarded_this_match = true
+			SkillProgress.award_for_result(skill_state, live.result)
+			SkillProgress.save_state(skill_state)
+			ui.refresh_skills(catalog, skill_state)
 
 func _on_build_requested(unit_id: String) -> void:
 	if live != null:

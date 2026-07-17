@@ -8,6 +8,7 @@ signal income_requested
 signal installment_requested
 signal flagship_fire_requested
 signal restart_requested
+signal skill_unlock_requested(skill_id: String)
 
 var _gold_label: Label
 var _base_label: Label
@@ -19,6 +20,10 @@ var _build_bar: HBoxContainer
 var _fire_button: Button
 var _result_panel: PanelContainer
 var _result_label: Label
+var _skills_button: Button
+var _skills_panel: PanelContainer
+var _skills_list: VBoxContainer
+var _meta_points_label: Label
 
 func _ready() -> void:
 	var root := Control.new()
@@ -78,6 +83,29 @@ func _ready() -> void:
 	_result_panel.add_child(vb)
 	root.add_child(_result_panel)
 
+	_skills_button = Button.new()
+	_skills_button.text = "Skills"
+	_skills_button.custom_minimum_size = Vector2(90, 48)
+	_skills_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_skills_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_skills_button.pressed.connect(func(): _skills_panel.visible = not _skills_panel.visible)
+	root.add_child(_skills_button)
+
+	_skills_panel = PanelContainer.new()
+	_skills_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_skills_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_skills_panel.position.y = 52
+	_skills_panel.custom_minimum_size = Vector2(240, 0)
+	_skills_panel.visible = false
+	var skills_vb := VBoxContainer.new()
+	_meta_points_label = Label.new()
+	_meta_points_label.add_theme_font_size_override("font_size", 16)
+	skills_vb.add_child(_meta_points_label)
+	_skills_list = VBoxContainer.new()
+	skills_vb.add_child(_skills_list)
+	_skills_panel.add_child(skills_vb)
+	root.add_child(_skills_panel)
+
 func _hud_label() -> Label:
 	var l := Label.new()
 	l.add_theme_font_size_override("font_size", 18)
@@ -103,6 +131,31 @@ func build_bar_for_roster(roster: Array, catalog: Catalog) -> void:
 	installment_btn.custom_minimum_size = Vector2(84, 64)
 	installment_btn.pressed.connect(func(): installment_requested.emit())
 	_build_bar.add_child(installment_btn)
+
+func refresh_skills(catalog: Catalog, state: Dictionary) -> void:
+	_meta_points_label.text = "Meta Points: %d" % int(state.get("meta_points", 0.0))
+	for child in _skills_list.get_children():
+		child.queue_free()
+	var unlocked: Array = state.get("unlocked", [])
+	for skill_id in catalog.skills.keys():
+		var sdef: Dictionary = catalog.skills[skill_id]
+		var row := HBoxContainer.new()
+		var label := Label.new()
+		label.custom_minimum_size = Vector2(150, 0)
+		label.add_theme_font_size_override("font_size", 13)
+		if unlocked.has(skill_id):
+			label.text = "%s ✓" % String(sdef["name"])
+			row.add_child(label)
+		else:
+			label.text = "%s (%d)" % [String(sdef["name"]), int(sdef["cost"])]
+			row.add_child(label)
+			var btn := Button.new()
+			btn.text = "Unlock"
+			btn.custom_minimum_size = Vector2(70, 36)
+			btn.disabled = not SkillProgress.can_unlock(state, catalog, skill_id)
+			btn.pressed.connect(func(): skill_unlock_requested.emit(skill_id))
+			row.add_child(btn)
+		_skills_list.add_child(row)
 
 func sync(live: LiveMatch) -> void:
 	_gold_label.text = "Gold: %d" % int(live.gold())

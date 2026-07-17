@@ -1,0 +1,23 @@
+[
+  {
+    "id": "high_altitude_bombing",
+    "name": "High-Altitude Bombing",
+    "description": "Patrol planes hit harder from altitude.",
+    "cost": 60,
+    "effect": { "type": "unit_attack", "target": "patrol_plane", "pct": 0.20 }
+  },
+  {
+    "id": "veteran_gunners",
+    "name": "Veteran Gunners",
+    "description": "All gun crews fire with better accuracy.",
+    "cost": 80,
+    "effect": { "type": "weapon_attack", "target": "gun", "pct": 0.12 }
+  },
+  {
+    "id": "advanced_torpedoes",
+    "name": "Advanced Torpedoes",
+    "description": "Improved torpedo warheads across the fleet.",
+    "cost": 90,
+    "effect": { "type": "weapon_attack", "target": "torpedo", "pct": 0.15 }
+  }
+]

@@ -149,6 +149,28 @@ static func _era_attack_mult(side: Dictionary, catalog: Catalog) -> float:
 		return 1.0
 	return float(catalog.eras[level]["attack_mult"])
 
+## Cross-stage skill-tree bonuses (interactive play only). MatchSim.run()
+## never sets "unlocked_skills" on a side, so this is always a no-op 1.0x
+## for every harness/oracle run — unlocks stay power, never keys, by
+## construction, matching Oracle #4 without needing a separate code path.
+static func _skill_attack_mult(side: Dictionary, catalog: Catalog, udef: Dictionary) -> float:
+	var unlocked: Array = side.get("unlocked_skills", [])
+	if unlocked.is_empty():
+		return 1.0
+	var mult := 1.0
+	var weapon: String = udef.get("weapon", "")
+	var unit_id: String = String(udef.get("id", ""))
+	for skill_id in unlocked:
+		if not catalog.skills.has(skill_id):
+			continue
+		var effect: Dictionary = catalog.skills[skill_id]["effect"]
+		var etype: String = String(effect["type"])
+		if etype == "weapon_attack" and String(effect["target"]) == weapon:
+			mult += float(effect["pct"])
+		elif etype == "unit_attack" and String(effect["target"]) == unit_id:
+			mult += float(effect["pct"])
+	return mult
+
 static func _check_era_upgrade(side: Dictionary, catalog: Catalog) -> void:
 	var xp: float = float(side.get("xp", 0.0))
 	var level: int = int(side.get("era_level", 0))
@@ -279,7 +301,7 @@ static func _resolve_combat_tick(player: Dictionary, enemy: Dictionary, catalog:
 		if _is_grounded(udef, weather_id, weather_table):
 			continue
 		var variance := 1.0 + rng.randf_range(-0.05, 0.05)
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog) * variance
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog) * _skill_attack_mult(player, catalog, udef) * variance
 		var detect := _weather_detect(udef, weather_id, weather_table)
 		var opposed: Array = []
 		for layer in udef["targets"]:
@@ -300,7 +322,7 @@ static func _resolve_combat_tick(player: Dictionary, enemy: Dictionary, catalog:
 		if _is_grounded(udef, weather_id, weather_table):
 			continue
 		var variance := 1.0 + rng.randf_range(-0.05, 0.05)
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(enemy, catalog) * variance
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(enemy, catalog) * _skill_attack_mult(enemy, catalog, udef) * variance
 		var detect := _weather_detect(udef, weather_id, weather_table)
 		var opposed: Array = []
 		for layer in udef["targets"]:
@@ -403,7 +425,7 @@ static func _resolve_boss_tick(player: Dictionary, boss: Dictionary, catalog: Ca
 		# alive can bring guns/depth-charges/flak to bear on it, regardless
 		# of the stealth/detection specialization that matters against
 		# regular forces.
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog)
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog) * _skill_attack_mult(player, catalog, udef)
 		if udef.get("flagship", false):
 			atk *= float(udef.get("boss_damage_mult", 1.0))
 		total_dmg += atk

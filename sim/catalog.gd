@@ -7,6 +7,7 @@ var economy: Dictionary = {}
 var weather: Dictionary = {}
 var bosses: Dictionary = {}
 var eras: Array = []
+var skills: Dictionary = {}
 var levels: Array = []
 var levels_by_id: Dictionary = {}
 
@@ -17,6 +18,7 @@ static func load_from(root: String) -> Catalog:
 	c.weather = DataLoader.load_json(root.path_join("data/weather.json"))
 	c.bosses = DataLoader.index_by_id(DataLoader.load_json(root.path_join("data/bosses/bosses.json")))
 	c.eras = DataLoader.load_json(root.path_join("data/eras.json"))["tiers"]
+	c.skills = DataLoader.index_by_id(DataLoader.load_json(root.path_join("data/skills.json")))
 	c.levels = DataLoader.load_all_levels(root.path_join("data/levels"))
 	for lvl in c.levels:
 		c.levels_by_id[lvl["id"]] = lvl
