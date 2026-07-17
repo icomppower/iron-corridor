@@ -22,7 +22,10 @@
     "patrol_plane",
     "corvette_asw",
     "flak_cruiser",
-    "battleship_flagship"
+    "battleship_flagship",
+    "carrier",
+    "midget_sub",
+    "minelayer"
   ],
   "boss_id": "potomac",
   "boss_trigger_hp_pct": 0.4,

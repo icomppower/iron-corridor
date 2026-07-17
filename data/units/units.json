@@ -160,5 +160,43 @@
     ],
     "flagship": true,
     "boss_damage_mult": 1.25
+  },
+  {
+    "id": "carrier",
+    "name": "Carrier",
+    "layer": "surface",
+    "cost": 230,
+    "spawn_time": 10.0,
+    "hp": 180.0,
+    "attack": 20.0,
+    "weapon": "flak",
+    "detect": ["surface", "air"],
+    "targets": ["air"]
+  },
+  {
+    "id": "midget_sub",
+    "name": "Midget Submarine",
+    "layer": "deep",
+    "cost": 55,
+    "spawn_time": 3.0,
+    "hp": 18.0,
+    "attack": 26.0,
+    "weapon": "torpedo",
+    "detect": ["surface"],
+    "targets": ["surface"],
+    "rule_breaker": true
+  },
+  {
+    "id": "minelayer",
+    "name": "Minelayer",
+    "layer": "surface",
+    "cost": 110,
+    "spawn_time": 6.0,
+    "hp": 70.0,
+    "attack": 10.0,
+    "weapon": "mine",
+    "detect": ["surface", "periscope", "deep"],
+    "targets": ["surface", "periscope", "deep"],
+    "rule_breaker": true
   }
 ]
