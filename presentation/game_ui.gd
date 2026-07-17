@@ -14,6 +14,7 @@ var _base_label: Label
 var _enemy_label: Label
 var _phase_label: Label
 var _weather_label: Label
+var _era_label: Label
 var _build_bar: HBoxContainer
 var _fire_button: Button
 var _result_panel: PanelContainer
@@ -36,8 +37,10 @@ func _ready() -> void:
 	var status_row := HBoxContainer.new()
 	_phase_label = _hud_label()
 	_weather_label = _hud_label()
+	_era_label = _hud_label()
 	status_row.add_child(_phase_label)
 	status_row.add_child(_weather_label)
+	status_row.add_child(_era_label)
 	top.add_child(_gold_label)
 	top.add_child(_base_label)
 	top.add_child(_enemy_label)
@@ -107,6 +110,7 @@ func sync(live: LiveMatch) -> void:
 	_enemy_label.text = "Enemy Base: %d / %d" % [int(live.enemy_base_hp()), int(live.enemy_base_hp_max())]
 	_phase_label.text = "Phase: %s" % live.phase
 	_weather_label.text = "  Weather: %s" % live.weather_id
+	_era_label.text = "  Era: %s" % live.era_name()
 	_fire_button.visible = live.phase == MatchSim.PHASE_BOSS
 
 	if live.is_over():

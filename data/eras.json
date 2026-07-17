@@ -1,0 +1,6 @@
+{
+  "tiers": [
+    { "level": 0, "xp_threshold": 0, "name": "WWII Gunline", "attack_mult": 1.0 },
+    { "level": 1, "xp_threshold": 420, "name": "Missile Age", "attack_mult": 1.15 }
+  ]
+}

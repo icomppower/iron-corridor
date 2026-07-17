@@ -53,6 +53,9 @@ func step() -> void:
 	player["gold"] += MatchSim._effective_income(player, float(economy["income_base"]), economy)
 	enemy["gold"] += MatchSim._effective_income(enemy, float(level["enemy_income_base"]), economy)
 
+	MatchSim._check_era_upgrade(player, catalog)
+	MatchSim._check_era_upgrade(enemy, catalog)
+
 	MatchSim._process_spawn_queue(player, catalog, tick)
 	MatchSim._process_spawn_queue(enemy, catalog, tick)
 
@@ -143,6 +146,12 @@ func enemy_base_hp() -> float:
 
 func enemy_base_hp_max() -> float:
 	return float(enemy["base_hp_max"])
+
+func era_name() -> String:
+	var level: int = int(player.get("era_level", 0))
+	if level < 0 or level >= catalog.eras.size():
+		return "?"
+	return String(catalog.eras[level]["name"])
 
 func boss_hp_pct() -> float:
 	if boss.is_empty():

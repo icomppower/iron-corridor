@@ -41,6 +41,10 @@ static func run(level: Dictionary, catalog: Catalog, player_strategy_id: String,
 		player["gold"] += _effective_income(player, float(economy["income_base"]), economy) * DT
 		enemy["gold"] += _effective_income(enemy, float(level["enemy_income_base"]), economy) * DT
 
+		# --- era evolution ---
+		_check_era_upgrade(player, catalog)
+		_check_era_upgrade(enemy, catalog)
+
 		# --- spawn queue resolution ---
 		_process_spawn_queue(player, catalog, tick)
 		_process_spawn_queue(enemy, catalog, tick)
@@ -110,7 +114,8 @@ static func run(level: Dictionary, catalog: Catalog, player_strategy_id: String,
 		"loss_phase": loss_phase,
 		"strategy": player_strategy_id,
 		"level_id": level["id"],
-		"built_units": player["built"].keys()
+		"built_units": player["built"].keys(),
+		"player_era_level": int(player["era_level"])
 	}
 
 ## ---------------------------------------------------------------- side state
@@ -125,12 +130,31 @@ static func _new_side(roster: Array, base_hp: float, starting_gold: float) -> Di
 		"roster": roster,
 		"stacks": {},
 		"spawn_queue": [],
-		"built": {}
+		"built": {},
+		"xp": 0.0,
+		"era_level": 0
 	}
 
 static func _effective_income(side: Dictionary, base_income: float, economy: Dictionary) -> float:
 	var bonus: float = float(economy["income_upgrade"]["income_bonus_pct"]) * int(side["income_level"])
 	return base_income * (1.0 + bonus)
+
+## In-match XP unlocks tech eras (WWII gunline -> missile age): a flat
+## attack multiplier applied once a side crosses the tier's XP threshold.
+## XP itself accrues from damage dealt (see _apply_layer_damage /
+## _resolve_boss_tick), so aggression is what pulls a side into the next era.
+static func _era_attack_mult(side: Dictionary, catalog: Catalog) -> float:
+	var level: int = int(side.get("era_level", 0))
+	if level < 0 or level >= catalog.eras.size():
+		return 1.0
+	return float(catalog.eras[level]["attack_mult"])
+
+static func _check_era_upgrade(side: Dictionary, catalog: Catalog) -> void:
+	var xp: float = float(side.get("xp", 0.0))
+	var level: int = int(side.get("era_level", 0))
+	while level + 1 < catalog.eras.size() and xp >= float(catalog.eras[level + 1]["xp_threshold"]):
+		level += 1
+	side["era_level"] = level
 
 static func spawn_cost(side: Dictionary, catalog: Catalog, unit_id: String, economy: Dictionary) -> float:
 	var udef: Dictionary = catalog.units[unit_id]
@@ -255,7 +279,7 @@ static func _resolve_combat_tick(player: Dictionary, enemy: Dictionary, catalog:
 		if _is_grounded(udef, weather_id, weather_table):
 			continue
 		var variance := 1.0 + rng.randf_range(-0.05, 0.05)
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * variance
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog) * variance
 		var detect := _weather_detect(udef, weather_id, weather_table)
 		var opposed: Array = []
 		for layer in udef["targets"]:
@@ -276,7 +300,7 @@ static func _resolve_combat_tick(player: Dictionary, enemy: Dictionary, catalog:
 		if _is_grounded(udef, weather_id, weather_table):
 			continue
 		var variance := 1.0 + rng.randf_range(-0.05, 0.05)
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * variance
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(enemy, catalog) * variance
 		var detect := _weather_detect(udef, weather_id, weather_table)
 		var opposed: Array = []
 		for layer in udef["targets"]:
@@ -296,6 +320,10 @@ static func _resolve_combat_tick(player: Dictionary, enemy: Dictionary, catalog:
 	player["base_hp"] -= overflow_to_player_base
 	enemy["base_hp"] -= unopposed_player * float(economy["base_chip_scale"]) * dt
 	player["base_hp"] -= unopposed_enemy * float(economy["base_chip_scale"]) * dt
+
+	var xp_per_dmg: float = float(economy["xp_per_damage"])
+	player["xp"] = float(player.get("xp", 0.0)) + (overflow_to_enemy_base + unopposed_player * float(economy["base_chip_scale"]) * dt) * xp_per_dmg
+	enemy["xp"] = float(enemy.get("xp", 0.0)) + (overflow_to_player_base + unopposed_enemy * float(economy["base_chip_scale"]) * dt) * xp_per_dmg
 
 static func _alive_layers(side: Dictionary, catalog: Catalog, weather_id: String, weather_table: Dictionary) -> Dictionary:
 	var layers := {}
@@ -337,6 +365,7 @@ static func _apply_layer_damage(defender: Dictionary, attacker: Dictionary, cata
 			var udef: Dictionary = catalog.units[uid]
 			var salvage: float = (lost / float(udef["hp"])) * float(udef["cost"]) * float(economy["wreck_salvage_pct"])
 			attacker["gold"] += salvage
+			attacker["xp"] = float(attacker.get("xp", 0.0)) + lost * float(economy["xp_per_damage"])
 	return total_overflow
 
 ## --------------------------------------------------------------------- boss
@@ -374,10 +403,12 @@ static func _resolve_boss_tick(player: Dictionary, boss: Dictionary, catalog: Ca
 		# alive can bring guns/depth-charges/flak to bear on it, regardless
 		# of the stealth/detection specialization that matters against
 		# regular forces.
-		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table)
+		var atk: float = float(udef["attack"]) * (st["alive_hp"] / float(udef["hp"])) * _weather_attack_mult(udef, weather_id, weather_table) * _era_attack_mult(player, catalog)
 		if udef.get("flagship", false):
 			atk *= float(udef.get("boss_damage_mult", 1.0))
 		total_dmg += atk
+	var applied_dmg: float = min(total_dmg, boss["hp"]) * dt
+	player["xp"] = float(player.get("xp", 0.0)) + applied_dmg
 	boss["hp"] = max(0.0, boss["hp"] - total_dmg * dt)
 	if boss["hp"] <= 0.0:
 		return

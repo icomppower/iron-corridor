@@ -17,5 +17,6 @@
   "wreck_salvage_pct": 0.35,
   "base_chip_scale": 0.6,
   "decision_interval_ticks": 5,
-  "ciws_intercept_scale": 200.0
+  "ciws_intercept_scale": 200.0,
+  "xp_per_damage": 1.0
 }
