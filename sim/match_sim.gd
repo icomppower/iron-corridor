@@ -361,8 +361,8 @@ static func _current_boss_phase(boss: Dictionary) -> Dictionary:
 		best = phase
 	return best
 
-static func _resolve_boss_tick(player: Dictionary, boss: Dictionary, catalog: Catalog, weather_id: String, weather_table: Dictionary, dt: float, rng: IronRNG) -> void:
-	var total_dmg := 0.0
+static func _resolve_boss_tick(player: Dictionary, boss: Dictionary, catalog: Catalog, weather_id: String, weather_table: Dictionary, dt: float, rng: IronRNG, manual_aim_bonus: float = 0.0) -> void:
+	var total_dmg := manual_aim_bonus
 	for uid in player["stacks"].keys():
 		var st: Dictionary = player["stacks"][uid]
 		if st["alive_hp"] <= 0.0:

@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Iron Corridor"
 config/description="3D Naval Lane Battler — spiritual successor to Black Navy War"
-run/main_scene=""
+run/main_scene="res://presentation/Main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
