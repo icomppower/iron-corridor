@@ -85,6 +85,11 @@ func step() -> void:
 				boss = MatchSim._spawn_boss(catalog, level["boss_id"])
 				phase_changed.emit(phase)
 		MatchSim.PHASE_BOSS:
+			# Mirror MatchSim: the lane keeps fighting during the boss, with
+			# the enemy base invincible until the boss dies.
+			var enemy_base_before: float = enemy["base_hp"]
+			MatchSim._resolve_combat_tick(player, enemy, catalog, weather_id, catalog.weather, economy, MatchSim.DT, rng)
+			enemy["base_hp"] = enemy_base_before
 			MatchSim._resolve_boss_tick(player, boss, catalog, weather_id, catalog.weather, MatchSim.DT, rng, _flagship_aim_bonus)
 			_flagship_aim_bonus = 0.0
 			if boss["hp"] <= 0.0:

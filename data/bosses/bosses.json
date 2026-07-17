@@ -2,24 +2,51 @@
   {
     "id": "potomac",
     "name": "Potomac",
-    "hp": 1200.0,
-    "base_attack": 34.0,
-    "target_layers": ["surface", "air"],
+    "hp": 1000.0,
+    "base_attack": 22.0,
+    "target_layers": [
+      "surface",
+      "air"
+    ],
     "phases": [
-      { "hp_pct_above": 0.5, "attack_mult": 1.0, "ability": null },
-      { "hp_pct_above": 0.0, "attack_mult": 1.35, "ability": "missile_barrage" }
+      {
+        "hp_pct_above": 0.5,
+        "attack_mult": 1.0,
+        "ability": null
+      },
+      {
+        "hp_pct_above": 0.0,
+        "attack_mult": 1.35,
+        "ability": "missile_barrage"
+      }
     ]
   },
   {
     "id": "dreadnought",
     "name": "Dreadnought",
-    "hp": 1400.0,
-    "base_attack": 36.0,
-    "target_layers": ["surface", "periscope", "air"],
+    "hp": 1250.0,
+    "base_attack": 28.0,
+    "target_layers": [
+      "surface",
+      "periscope",
+      "air"
+    ],
     "phases": [
-      { "hp_pct_above": 0.6, "attack_mult": 1.0, "ability": null },
-      { "hp_pct_above": 0.3, "attack_mult": 1.25, "ability": "missile_barrage" },
-      { "hp_pct_above": 0.0, "attack_mult": 1.4, "ability": "depth_charge_spread" }
+      {
+        "hp_pct_above": 0.6,
+        "attack_mult": 1.0,
+        "ability": null
+      },
+      {
+        "hp_pct_above": 0.3,
+        "attack_mult": 1.25,
+        "ability": "missile_barrage"
+      },
+      {
+        "hp_pct_above": 0.0,
+        "attack_mult": 1.4,
+        "ability": "depth_charge_spread"
+      }
     ]
   }
 ]

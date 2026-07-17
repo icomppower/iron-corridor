@@ -75,6 +75,14 @@ static func run(level: Dictionary, catalog: Catalog, player_strategy_id: String,
 					phase = PHASE_BOSS
 					boss = _spawn_boss(catalog, level["boss_id"])
 			PHASE_BOSS:
+				# The lane keeps fighting while the boss is engaged — that is
+				# what makes "enemy base is invincible while its boss is
+				# alive" a rule rather than a no-op. A frozen lane turned the
+				# boss fight into a pure standing-army check that a slow wall
+				# comp banked its way through every time.
+				var enemy_base_before: float = enemy["base_hp"]
+				_resolve_combat_tick(player, enemy, catalog, weather_id, weather_table, economy, DT, rng)
+				enemy["base_hp"] = enemy_base_before
 				_resolve_boss_tick(player, boss, catalog, weather_id, weather_table, DT, rng)
 				if boss["hp"] <= 0.0:
 					boss_killed = true
