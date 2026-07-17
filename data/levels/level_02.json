@@ -2,7 +2,7 @@
   "id": "level_02",
   "name": "Strait Contest",
   "turn_budget": 390,
-  "enemy_income_base": 11.5,
+  "enemy_income_base": 12.0,
   "enemy_base_hp": 1300,
   "player_base_hp": 680,
   "enemy_roster": [
@@ -43,7 +43,8 @@
     "hovercraft",
     "destroyer",
     "submarine_shallow",
-    "INCOME"
+    "INCOME",
+    "INSTALLMENT"
   ],
-  "enemy_starting_gold": 50.0
+  "enemy_starting_gold": 100.0
 }

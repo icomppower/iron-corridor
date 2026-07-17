@@ -2,7 +2,7 @@
   "id": "level_04",
   "name": "Deepwater Blockade",
   "turn_budget": 410,
-  "enemy_income_base": 15.5,
+  "enemy_income_base": 15.0,
   "enemy_base_hp": 1650,
   "player_base_hp": 740,
   "enemy_roster": [
@@ -49,7 +49,8 @@
     "submarine_shallow",
     "destroyer",
     "flak_cruiser",
-    "INCOME"
+    "INCOME",
+    "INSTALLMENT"
   ],
-  "enemy_starting_gold": 130.0
+  "enemy_starting_gold": 170.0
 }

@@ -2,7 +2,7 @@
   "id": "level_01",
   "name": "Coastal Approach",
   "turn_budget": 400,
-  "enemy_income_base": 9.5,
+  "enemy_income_base": 10.5,
   "enemy_base_hp": 1050,
   "player_base_hp": 650,
   "enemy_roster": [
@@ -43,5 +43,5 @@
     "submarine_shallow",
     "INCOME"
   ],
-  "enemy_starting_gold": 0.0
+  "enemy_starting_gold": 60.0
 }

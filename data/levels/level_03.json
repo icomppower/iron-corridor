@@ -2,7 +2,7 @@
   "id": "level_03",
   "name": "Convoy Gauntlet",
   "turn_budget": 400,
-  "enemy_income_base": 14.0,
+  "enemy_income_base": 13.5,
   "enemy_base_hp": 1650,
   "player_base_hp": 710,
   "enemy_roster": [
@@ -45,7 +45,8 @@
     "submarine_shallow",
     "destroyer",
     "corvette_asw",
-    "INCOME"
+    "INCOME",
+    "INSTALLMENT"
   ],
-  "enemy_starting_gold": 110.0
+  "enemy_starting_gold": 140.0
 }
