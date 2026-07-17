@@ -4,3 +4,4 @@ export.cfg
 export_credentials.cfg
 *.translation
 harness/out/
+build/
