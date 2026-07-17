@@ -16,7 +16,7 @@ static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, leve
 		"eco":
 			_eco(side, catalog, level, economy, tick)
 		"turtle":
-			_spend_weighted(side, catalog, economy, tick, ["destroyer", "corvette_asw", "flak_cruiser"])
+			_spend_weighted(side, catalog, economy, tick, ["minelayer", "corvette_asw", "flak_cruiser"])
 		"mixed":
 			_spend_weighted(side, catalog, economy, tick, ["corvette_asw", "destroyer", "flak_cruiser", "submarine_shallow", "hovercraft", "minelayer", "INCOME", "battleship_flagship", "carrier"])
 		"level_ai":

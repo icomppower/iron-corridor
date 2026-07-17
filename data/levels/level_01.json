@@ -1,7 +1,7 @@
 {
   "id": "level_01",
   "name": "Coastal Approach",
-  "turn_budget": 420,
+  "turn_budget": 400,
   "enemy_income_base": 11.0,
   "enemy_base_hp": 1050,
   "player_base_hp": 650,
@@ -38,6 +38,7 @@
     "storm": 0.05
   },
   "enemy_priority": [
+    "gunboat",
     "gunboat",
     "destroyer",
     "submarine_shallow",
