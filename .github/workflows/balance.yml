@@ -1,0 +1,45 @@
+name: Balance Oracle
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: /opt/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Install Godot headless
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /opt/godot
+          curl -fL -o /tmp/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /opt/godot
+          mv /opt/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 /opt/godot/godot
+          chmod +x /opt/godot/godot
+
+      - name: Import project (builds global class cache)
+        run: /opt/godot/godot --headless --path . --editor --quit
+
+      - name: Run balance harness
+        run: /opt/godot/godot --headless --path . --script res://harness/run_balance.gd
+
+      - name: Run oracle checker
+        run: /opt/godot/godot --headless --path . --script res://harness/oracle_check.gd
+
+      - name: Upload balance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-results
+          path: harness/out/balance_results.json

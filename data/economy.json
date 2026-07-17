@@ -1,0 +1,21 @@
+{
+  "income_base": 12.0,
+  "starting_gold": 150.0,
+  "income_upgrade": {
+    "cost_base": 100.0,
+    "cost_growth": 1.6,
+    "income_bonus_pct": 0.15,
+    "max_level": 6
+  },
+  "installment_upgrade": {
+    "cost_base": 80.0,
+    "cost_growth": 1.5,
+    "cost_reduction_pct": 0.08,
+    "max_level": 5
+  },
+  "recycle_refund_pct": 0.5,
+  "wreck_salvage_pct": 0.35,
+  "base_chip_scale": 0.6,
+  "decision_interval_ticks": 5,
+  "ciws_intercept_scale": 200.0
+}

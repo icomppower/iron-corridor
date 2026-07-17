@@ -1,0 +1,40 @@
+{
+  "id": "level_03",
+  "name": "Convoy Gauntlet",
+  "turn_budget": 400,
+  "enemy_income_base": 15.0,
+  "enemy_base_hp": 1550,
+  "player_base_hp": 710,
+  "enemy_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "patrol_plane",
+    "corvette_asw"
+  ],
+  "player_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser",
+    "battleship_flagship"
+  ],
+  "boss_id": "potomac",
+  "boss_trigger_hp_pct": 0.4,
+  "missile_wave": {
+    "count": 7,
+    "interval": 2.5,
+    "damage": 26
+  },
+  "weather_table": {
+    "clear": 0.5,
+    "fog": 0.2,
+    "night": 0.2,
+    "storm": 0.1
+  }
+}

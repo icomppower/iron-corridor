@@ -1,0 +1,42 @@
+{
+  "id": "level_05",
+  "name": "Iron Corridor",
+  "turn_budget": 420,
+  "enemy_income_base": 16.5,
+  "enemy_base_hp": 1800,
+  "player_base_hp": 770,
+  "enemy_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser"
+  ],
+  "player_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser",
+    "battleship_flagship"
+  ],
+  "boss_id": "dreadnought",
+  "boss_trigger_hp_pct": 0.4,
+  "missile_wave": {
+    "count": 9,
+    "interval": 2.0,
+    "damage": 30
+  },
+  "weather_table": {
+    "clear": 0.4,
+    "fog": 0.2,
+    "night": 0.2,
+    "storm": 0.2
+  }
+}

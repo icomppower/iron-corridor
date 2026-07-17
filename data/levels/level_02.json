@@ -1,0 +1,38 @@
+{
+  "id": "level_02",
+  "name": "Strait Contest",
+  "turn_budget": 390,
+  "enemy_income_base": 13.0,
+  "enemy_base_hp": 1300,
+  "player_base_hp": 680,
+  "enemy_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "hovercraft"
+  ],
+  "player_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser",
+    "battleship_flagship"
+  ],
+  "boss_id": "potomac",
+  "boss_trigger_hp_pct": 0.4,
+  "missile_wave": {
+    "count": 6,
+    "interval": 3.0,
+    "damage": 24
+  },
+  "weather_table": {
+    "clear": 0.55,
+    "fog": 0.2,
+    "night": 0.15,
+    "storm": 0.1
+  }
+}

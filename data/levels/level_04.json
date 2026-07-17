@@ -1,0 +1,42 @@
+{
+  "id": "level_04",
+  "name": "Deepwater Blockade",
+  "turn_budget": 410,
+  "enemy_income_base": 15.5,
+  "enemy_base_hp": 1650,
+  "player_base_hp": 740,
+  "enemy_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser"
+  ],
+  "player_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser",
+    "battleship_flagship"
+  ],
+  "boss_id": "dreadnought",
+  "boss_trigger_hp_pct": 0.4,
+  "missile_wave": {
+    "count": 8,
+    "interval": 2.5,
+    "damage": 28
+  },
+  "weather_table": {
+    "clear": 0.45,
+    "fog": 0.2,
+    "night": 0.2,
+    "storm": 0.15
+  }
+}

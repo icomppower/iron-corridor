@@ -1,0 +1,164 @@
+[
+  {
+    "id": "gunboat",
+    "name": "Gunboat",
+    "layer": "surface",
+    "cost": 58,
+    "spawn_time": 3.0,
+    "hp": 40.0,
+    "attack": 9.0,
+    "weapon": "gun",
+    "detect": [
+      "surface"
+    ],
+    "targets": [
+      "surface"
+    ]
+  },
+  {
+    "id": "destroyer",
+    "name": "Destroyer",
+    "layer": "surface",
+    "cost": 120,
+    "spawn_time": 6.0,
+    "hp": 90.0,
+    "attack": 16.0,
+    "weapon": "gun",
+    "detect": [
+      "surface",
+      "periscope"
+    ],
+    "targets": [
+      "surface",
+      "periscope"
+    ]
+  },
+  {
+    "id": "submarine_shallow",
+    "name": "Submarine (Periscope)",
+    "layer": "periscope",
+    "cost": 140,
+    "spawn_time": 7.0,
+    "hp": 70.0,
+    "attack": 25.0,
+    "weapon": "torpedo",
+    "detect": [
+      "surface",
+      "periscope"
+    ],
+    "targets": [
+      "surface"
+    ]
+  },
+  {
+    "id": "submarine_deep",
+    "name": "Submarine (Deep)",
+    "layer": "deep",
+    "cost": 160,
+    "spawn_time": 8.0,
+    "hp": 70.0,
+    "attack": 20.0,
+    "weapon": "torpedo",
+    "detect": [
+      "surface"
+    ],
+    "targets": [
+      "surface"
+    ]
+  },
+  {
+    "id": "hovercraft",
+    "name": "Hovercraft",
+    "layer": "surface",
+    "cost": 100,
+    "spawn_time": 5.0,
+    "hp": 55.0,
+    "attack": 18.0,
+    "weapon": "torpedo",
+    "detect": [
+      "surface",
+      "deep"
+    ],
+    "targets": [
+      "surface",
+      "deep"
+    ],
+    "rule_breaker": true
+  },
+  {
+    "id": "patrol_plane",
+    "name": "Patrol Plane",
+    "layer": "air",
+    "cost": 90,
+    "spawn_time": 5.0,
+    "hp": 35.0,
+    "attack": 14.0,
+    "weapon": "bomb",
+    "detect": [
+      "surface",
+      "periscope"
+    ],
+    "targets": [
+      "surface",
+      "periscope"
+    ],
+    "grounded_by_storm": true
+  },
+  {
+    "id": "corvette_asw",
+    "name": "ASW Corvette",
+    "layer": "surface",
+    "cost": 98,
+    "spawn_time": 4.0,
+    "hp": 50.0,
+    "attack": 12.0,
+    "weapon": "depth_charge",
+    "detect": [
+      "surface",
+      "periscope",
+      "deep"
+    ],
+    "targets": [
+      "periscope",
+      "deep"
+    ]
+  },
+  {
+    "id": "flak_cruiser",
+    "name": "Flak Cruiser",
+    "layer": "surface",
+    "cost": 115,
+    "spawn_time": 5.0,
+    "hp": 60.0,
+    "attack": 15.0,
+    "weapon": "flak",
+    "detect": [
+      "surface",
+      "air"
+    ],
+    "targets": [
+      "air"
+    ],
+    "ciws": true
+  },
+  {
+    "id": "battleship_flagship",
+    "name": "Flagship Battleship",
+    "layer": "surface",
+    "cost": 245,
+    "spawn_time": 11.0,
+    "hp": 260.0,
+    "attack": 36.0,
+    "weapon": "gun",
+    "detect": [
+      "surface",
+      "periscope"
+    ],
+    "targets": [
+      "surface",
+      "periscope"
+    ],
+    "flagship": true,
+    "boss_damage_mult": 1.25
+  }
+]

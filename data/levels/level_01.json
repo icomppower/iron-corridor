@@ -1,0 +1,37 @@
+{
+  "id": "level_01",
+  "name": "Coastal Approach",
+  "turn_budget": 380,
+  "enemy_income_base": 10.5,
+  "enemy_base_hp": 1050,
+  "player_base_hp": 650,
+  "enemy_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow"
+  ],
+  "player_roster": [
+    "gunboat",
+    "destroyer",
+    "submarine_shallow",
+    "submarine_deep",
+    "hovercraft",
+    "patrol_plane",
+    "corvette_asw",
+    "flak_cruiser",
+    "battleship_flagship"
+  ],
+  "boss_id": "potomac",
+  "boss_trigger_hp_pct": 0.4,
+  "missile_wave": {
+    "count": 5,
+    "interval": 3.0,
+    "damage": 22
+  },
+  "weather_table": {
+    "clear": 0.65,
+    "fog": 0.15,
+    "night": 0.15,
+    "storm": 0.05
+  }
+}
