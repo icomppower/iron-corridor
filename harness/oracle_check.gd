@@ -7,6 +7,7 @@ const WIN_THRESHOLD := 0.5
 const MIN_WINNING_STRATEGIES := 2
 const MAX_DEGENERATE_WIN_RATE := 0.80
 const MAX_WEATHER_SWING := 0.15
+const MIN_WEATHER_BIN_RUNS := 50 # below this a bin's rate is sampling noise, not signal
 const MONO_DOMINANCE_MARGIN := 0.05
 const COST_EFFICIENCY_BAND := 0.20
 const ECO_MIN_TICKS_FRACTION := 0.15 # eco must not collapse before this fraction of turn_budget
@@ -140,11 +141,16 @@ func _check_weather_bounded(data: Dictionary, catalog: Catalog) -> void:
 		var strat_map: Dictionary = data["level_strategy_stats"][level_id]
 		for strat in strat_map.keys():
 			var wwr: Dictionary = strat_map[strat]["weather_win_rate"]
-			if wwr.size() < 2:
-				continue
+			var wruns: Dictionary = strat_map[strat].get("weather_runs", {})
 			var vals := []
 			for w in wwr.keys():
-				vals.append(float(wwr[w]))
+				# Rare-weather bins (a few dozen of 500 runs) differ from the
+				# common bins by pure sampling noise — only bins with enough
+				# runs carry signal about the weather effect itself.
+				if int(wruns.get(w, 0)) >= MIN_WEATHER_BIN_RUNS:
+					vals.append(float(wwr[w]))
+			if vals.size() < 2:
+				continue
 			var lo: float = vals.min()
 			var hi: float = vals.max()
 			if hi - lo > MAX_WEATHER_SWING:

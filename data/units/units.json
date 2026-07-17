@@ -22,7 +22,7 @@
     "cost": 120,
     "spawn_time": 6.0,
     "hp": 90.0,
-    "attack": 16.0,
+    "attack": 13.0,
     "weapon": "gun",
     "detect": [
       "surface",
@@ -42,7 +42,7 @@
     "cost": 140,
     "spawn_time": 7.0,
     "hp": 70.0,
-    "attack": 26.0,
+    "attack": 23.0,
     "weapon": "torpedo",
     "detect": [
       "surface",
@@ -75,7 +75,7 @@
     "cost": 100,
     "spawn_time": 5.0,
     "hp": 55.0,
-    "attack": 16.0,
+    "attack": 14.0,
     "weapon": "torpedo",
     "detect": [
       "surface",
@@ -113,7 +113,7 @@
     "cost": 98,
     "spawn_time": 4.0,
     "hp": 58.0,
-    "attack": 15.0,
+    "attack": 12.0,
     "weapon": "depth_charge",
     "detect": [
       "surface",
@@ -133,7 +133,7 @@
     "cost": 115,
     "spawn_time": 5.0,
     "hp": 60.0,
-    "attack": 23.0,
+    "attack": 19.0,
     "weapon": "flak",
     "detect": [
       "surface",
@@ -152,7 +152,7 @@
     "cost": 245,
     "spawn_time": 11.0,
     "hp": 220.0,
-    "attack": 26.0,
+    "attack": 22.0,
     "weapon": "gun",
     "detect": [
       "surface",
@@ -174,7 +174,7 @@
     "cost": 230,
     "spawn_time": 10.0,
     "hp": 180.0,
-    "attack": 31.0,
+    "attack": 26.0,
     "weapon": "flak",
     "detect": [
       "surface",
@@ -211,7 +211,7 @@
     "cost": 105,
     "spawn_time": 6.0,
     "hp": 70.0,
-    "attack": 16.0,
+    "attack": 13.0,
     "weapon": "mine",
     "detect": [
       "surface",

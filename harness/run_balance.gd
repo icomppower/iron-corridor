@@ -132,5 +132,6 @@ func _finalize_agg(agg: Dictionary, n: int) -> Dictionary:
 		"submarine_play_rate": float(agg["with_sub"]) / n,
 		"win_rate_with_submarine": (float(agg["with_sub_wins"]) / agg["with_sub"]) if agg["with_sub"] > 0 else -1.0,
 		"win_rate_without_submarine": (float(agg["without_sub_wins"]) / without_sub) if without_sub > 0 else -1.0,
-		"weather_win_rate": weather_win_rate
+		"weather_win_rate": weather_win_rate,
+		"weather_runs": agg["weather_runs"]
 	}
