@@ -37,5 +37,12 @@
     "fog": 0.2,
     "night": 0.15,
     "storm": 0.1
-  }
+  },
+  "enemy_priority": [
+    "gunboat",
+    "hovercraft",
+    "destroyer",
+    "submarine_shallow",
+    "INCOME"
+  ]
 }

@@ -12,7 +12,7 @@ static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, leve
 		return
 	match strategy_id:
 		"rush":
-			_spend_weighted(side, catalog, economy, tick, ["gunboat", "hovercraft", "submarine_shallow"])
+			_spend_weighted(side, catalog, economy, tick, ["gunboat", "gunboat", "midget_sub", "hovercraft"])
 		"eco":
 			_eco(side, catalog, level, economy, tick)
 		"turtle":
@@ -20,7 +20,11 @@ static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, leve
 		"mixed":
 			_spend_weighted(side, catalog, economy, tick, ["gunboat", "corvette_asw", "destroyer", "flak_cruiser", "submarine_shallow", "hovercraft", "minelayer", "INCOME", "battleship_flagship", "carrier"])
 		"level_ai":
-			_spend_weighted(side, catalog, economy, tick, ["gunboat", "destroyer", "submarine_shallow", "hovercraft", "corvette_asw", "flak_cruiser", "midget_sub", "submarine_deep", "INCOME", "battleship_flagship"])
+			# Per-level enemy composition is rules-as-data: levels may ship an
+			# "enemy_priority" list to shape what the AI masses (e.g. sub-heavy
+			# wall-breaker comps on later levels). Roster still gates buys.
+			var default_priority := ["gunboat", "destroyer", "submarine_shallow", "hovercraft", "corvette_asw", "flak_cruiser", "midget_sub", "submarine_deep", "INCOME", "battleship_flagship"]
+			_spend_weighted(side, catalog, economy, tick, level.get("enemy_priority", default_priority))
 		_:
 			push_error("Strategies: unknown strategy_id %s" % strategy_id)
 
@@ -38,11 +42,12 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 	var defender_hp := 0.0
 	for uid in side["stacks"].keys():
 		defender_hp += float(side["stacks"][uid]["alive_hp"])
-	var udef: Dictionary = catalog.units.get("gunboat", {})
+	var seed_unit := "corvette_asw" if side["roster"].has("corvette_asw") else "gunboat"
+	var udef: Dictionary = catalog.units.get(seed_unit, {})
 	var threat_scale: float = max(1.0, float(level.get("enemy_income_base", 12.0)) / 12.0)
 	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0 * threat_scale
-	if defender_hp < seed_target and side["roster"].has("gunboat"):
-		MatchSim.enqueue_build(side, catalog, "gunboat", economy, tick)
+	if defender_hp < seed_target and side["roster"].has(seed_unit):
+		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
 		return
 	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "gunboat", "corvette_asw"])
 
