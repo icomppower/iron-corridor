@@ -37,16 +37,18 @@ static func _eco(side: Dictionary, catalog: Catalog, economy: Dictionary, tick: 
 	for uid in side["stacks"].keys():
 		defender_hp += float(side["stacks"][uid]["alive_hp"])
 	var udef: Dictionary = catalog.units.get("gunboat", {})
-	var seed_target: float = float(udef.get("hp", 40.0)) * 2.0
+	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0
 	if defender_hp < seed_target and side["roster"].has("gunboat"):
 		MatchSim.enqueue_build(side, catalog, "gunboat", economy, tick)
 		return
 	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "gunboat", "corvette_asw"])
 
 ## Fair-share purchase scheduler: every priority item accrues "credit" each
-## decision call, and we always spend on the most-overdue affordable item.
-## This is what lets expensive/rare slots (submarines, flagships) actually
-## get bought instead of being perpetually crowded out by whatever's cheap.
+## decision call, and we always spend on the most-overdue item. If the
+## most-overdue item is not affordable yet, the side holds its gold and
+## saves up for it instead of skipping to something cheaper — otherwise
+## expensive/rare slots (submarines, flagships) are perpetually crowded
+## out by whatever's cheap and never get bought at all.
 static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Dictionary, tick: int, priority: Array) -> void:
 	var credit: Dictionary = side.get("_credit", {})
 	for item in priority:
@@ -57,14 +59,24 @@ static func _spend_weighted(side: Dictionary, catalog: Catalog, economy: Diction
 		var best := ""
 		var best_credit := -1.0
 		for item in priority:
-			if float(credit.get(item, 0.0)) > best_credit and _affordable(side, catalog, economy, item):
+			if float(credit.get(item, 0.0)) > best_credit and _purchasable(side, catalog, item):
 				best = item
 				best_credit = credit[item]
-		if best == "":
+		if best == "" or not _affordable(side, catalog, economy, best):
 			break
 		_execute_buy(side, catalog, economy, tick, best)
 		credit[best] = 0.0
 	side["_credit"] = credit
+
+## Whether the item is a valid purchase target at all (in roster / upgrade
+## not maxed) — independent of current gold, so the scheduler can decide
+## to save up for it.
+static func _purchasable(side: Dictionary, catalog: Catalog, item: String) -> bool:
+	if item == "INCOME":
+		return int(side["income_level"]) < int(catalog.economy["income_upgrade"]["max_level"])
+	elif item == "INSTALLMENT":
+		return int(side["installment_level"]) < int(catalog.economy["installment_upgrade"]["max_level"])
+	return side["roster"].has(item) and catalog.units.has(item)
 
 static func _affordable(side: Dictionary, catalog: Catalog, economy: Dictionary, item: String) -> bool:
 	if item == "INCOME":

@@ -6,7 +6,7 @@
     "cost": 58,
     "spawn_time": 3.0,
     "hp": 40.0,
-    "attack": 9.0,
+    "attack": 8.0,
     "weapon": "gun",
     "detect": [
       "surface"
@@ -26,11 +26,13 @@
     "weapon": "gun",
     "detect": [
       "surface",
-      "periscope"
+      "periscope",
+      "air"
     ],
     "targets": [
       "surface",
-      "periscope"
+      "periscope",
+      "air"
     ]
   },
   {
@@ -110,8 +112,8 @@
     "layer": "surface",
     "cost": 98,
     "spawn_time": 4.0,
-    "hp": 50.0,
-    "attack": 12.0,
+    "hp": 58.0,
+    "attack": 14.0,
     "weapon": "depth_charge",
     "detect": [
       "surface",
@@ -119,6 +121,7 @@
       "deep"
     ],
     "targets": [
+      "surface",
       "periscope",
       "deep"
     ]
@@ -130,14 +133,15 @@
     "cost": 115,
     "spawn_time": 5.0,
     "hp": 60.0,
-    "attack": 15.0,
+    "attack": 20.0,
     "weapon": "flak",
     "detect": [
       "surface",
       "air"
     ],
     "targets": [
-      "air"
+      "air",
+      "surface"
     ],
     "ciws": true
   },
@@ -147,16 +151,18 @@
     "layer": "surface",
     "cost": 245,
     "spawn_time": 11.0,
-    "hp": 260.0,
-    "attack": 36.0,
+    "hp": 220.0,
+    "attack": 26.0,
     "weapon": "gun",
     "detect": [
       "surface",
-      "periscope"
+      "periscope",
+      "air"
     ],
     "targets": [
       "surface",
-      "periscope"
+      "periscope",
+      "air"
     ],
     "flagship": true,
     "boss_damage_mult": 1.25
@@ -168,10 +174,10 @@
     "cost": 230,
     "spawn_time": 10.0,
     "hp": 180.0,
-    "attack": 20.0,
+    "attack": 28.0,
     "weapon": "flak",
-    "detect": ["surface", "air"],
-    "targets": ["air"]
+    "detect": ["surface", "air", "periscope"],
+    "targets": ["air", "surface", "periscope"]
   },
   {
     "id": "midget_sub",
@@ -180,7 +186,7 @@
     "cost": 55,
     "spawn_time": 3.0,
     "hp": 18.0,
-    "attack": 26.0,
+    "attack": 13.0,
     "weapon": "torpedo",
     "detect": ["surface"],
     "targets": ["surface"],
@@ -190,10 +196,10 @@
     "id": "minelayer",
     "name": "Minelayer",
     "layer": "surface",
-    "cost": 110,
+    "cost": 105,
     "spawn_time": 6.0,
     "hp": 70.0,
-    "attack": 10.0,
+    "attack": 15.0,
     "weapon": "mine",
     "detect": ["surface", "periscope", "deep"],
     "targets": ["surface", "periscope", "deep"],
