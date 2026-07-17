@@ -2,7 +2,7 @@
   "id": "level_04",
   "name": "Deepwater Blockade",
   "turn_budget": 410,
-  "enemy_income_base": 16.5,
+  "enemy_income_base": 18.0,
   "enemy_base_hp": 1650,
   "player_base_hp": 740,
   "enemy_roster": [
