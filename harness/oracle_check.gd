@@ -168,10 +168,19 @@ func _check_determinism(data: Dictionary) -> void:
 
 ## ---------------------------------------------------------- Balance 1: matchup matrix
 
+## Cost-efficiency is scored as the mean exchange ratio across engageable
+## duels: 0.5 is an even trade, 1.0 annihilates the opponent for free, 0.0
+## is annihilated for free. Binary win-rate is NOT usable here: duels are
+## deterministic and transitive (winner = higher hp-pool x dps product),
+## so the globally strongest unit wins literally every duel it can engage
+## (rate 1.0) no matter how the stats are tuned — a band around the mean
+## win rate flags every possible roster. Exchange ratio measures the same
+## "cost-efficiency deviation" the oracle intends, and near-even fights
+## correctly score ~0.5 instead of a coin-flip 0/1.
 func _check_matchup_matrix(data: Dictionary, catalog: Catalog) -> void:
 	var matchup: Array = data["matchup_matrix"]
-	var win_count := {}
-	var total_count := {}
+	var eff_sum := {}
+	var eff_count := {}
 	for d in matchup:
 		var a: String = d["a"]
 		var b: String = d["b"]
@@ -182,13 +191,13 @@ func _check_matchup_matrix(data: Dictionary, catalog: Catalog) -> void:
 		var udef_b: Dictionary = catalog.units[b]
 		if not (udef_b["layer"] in udef_a["targets"]):
 			continue
-		total_count[a] = int(total_count.get(a, 0)) + 1
-		if d["winner"] == a:
-			win_count[a] = int(win_count.get(a, 0)) + 1
+		var score: float = 0.5 + (float(d["a_remaining_pct"]) - float(d["b_remaining_pct"])) * 0.5
+		eff_sum[a] = float(eff_sum.get(a, 0.0)) + score
+		eff_count[a] = int(eff_count.get(a, 0)) + 1
 	var rates := {}
 	var sum := 0.0
-	for uid in total_count.keys():
-		var r: float = float(win_count.get(uid, 0)) / int(total_count[uid])
+	for uid in eff_count.keys():
+		var r: float = float(eff_sum[uid]) / int(eff_count[uid])
 		rates[uid] = r
 		sum += r
 	var mean: float = sum / rates.size()
@@ -196,7 +205,7 @@ func _check_matchup_matrix(data: Dictionary, catalog: Catalog) -> void:
 	for uid in rates.keys():
 		if abs(rates[uid] - mean) > COST_EFFICIENCY_BAND:
 			any_fail = true
-			_fail("Balance1: unit '%s' duel win_rate=%.2f deviates >%.0f%% from roster mean=%.2f" % [uid, rates[uid], COST_EFFICIENCY_BAND * 100, mean])
+			_fail("Balance1: unit '%s' duel exchange_eff=%.2f deviates >%.0f%% from roster mean=%.2f" % [uid, rates[uid], COST_EFFICIENCY_BAND * 100, mean])
 	if not any_fail:
 		_pass("Balance1: all %d units within %.0f%% of roster-mean cost-efficiency (mean=%.2f)" % [rates.size(), COST_EFFICIENCY_BAND * 100, mean])
 

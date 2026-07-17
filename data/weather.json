@@ -1,11 +1,11 @@
 {
   "clear": {},
   "fog": {
-    "gun_attack_pct": -0.08
+    "gun_attack_pct": -0.06
   },
   "night": {
-    "torpedo_attack_pct": 0.07,
-    "gun_attack_pct": -0.04
+    "torpedo_attack_pct": 0.05,
+    "gun_attack_pct": -0.03
   },
   "storm": {
     "grounds_air": true

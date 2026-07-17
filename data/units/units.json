@@ -42,7 +42,7 @@
     "cost": 140,
     "spawn_time": 7.0,
     "hp": 70.0,
-    "attack": 25.0,
+    "attack": 26.0,
     "weapon": "torpedo",
     "detect": [
       "surface",
@@ -75,7 +75,7 @@
     "cost": 100,
     "spawn_time": 5.0,
     "hp": 55.0,
-    "attack": 18.0,
+    "attack": 16.0,
     "weapon": "torpedo",
     "detect": [
       "surface",
@@ -113,7 +113,7 @@
     "cost": 98,
     "spawn_time": 4.0,
     "hp": 58.0,
-    "attack": 14.0,
+    "attack": 15.0,
     "weapon": "depth_charge",
     "detect": [
       "surface",
@@ -133,7 +133,7 @@
     "cost": 115,
     "spawn_time": 5.0,
     "hp": 60.0,
-    "attack": 20.0,
+    "attack": 23.0,
     "weapon": "flak",
     "detect": [
       "surface",
@@ -174,10 +174,18 @@
     "cost": 230,
     "spawn_time": 10.0,
     "hp": 180.0,
-    "attack": 28.0,
+    "attack": 31.0,
     "weapon": "flak",
-    "detect": ["surface", "air", "periscope"],
-    "targets": ["air", "surface", "periscope"]
+    "detect": [
+      "surface",
+      "air",
+      "periscope"
+    ],
+    "targets": [
+      "air",
+      "surface",
+      "periscope"
+    ]
   },
   {
     "id": "midget_sub",
@@ -188,8 +196,12 @@
     "hp": 18.0,
     "attack": 13.0,
     "weapon": "torpedo",
-    "detect": ["surface"],
-    "targets": ["surface"],
+    "detect": [
+      "surface"
+    ],
+    "targets": [
+      "surface"
+    ],
     "rule_breaker": true
   },
   {
@@ -199,10 +211,18 @@
     "cost": 105,
     "spawn_time": 6.0,
     "hp": 70.0,
-    "attack": 15.0,
+    "attack": 16.0,
     "weapon": "mine",
-    "detect": ["surface", "periscope", "deep"],
-    "targets": ["surface", "periscope", "deep"],
+    "detect": [
+      "surface",
+      "periscope",
+      "deep"
+    ],
+    "targets": [
+      "surface",
+      "periscope",
+      "deep"
+    ],
     "rule_breaker": true
   }
 ]

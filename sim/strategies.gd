@@ -14,13 +14,13 @@ static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, leve
 		"rush":
 			_spend_weighted(side, catalog, economy, tick, ["gunboat", "hovercraft", "submarine_shallow"])
 		"eco":
-			_eco(side, catalog, economy, tick)
+			_eco(side, catalog, level, economy, tick)
 		"turtle":
 			_spend_weighted(side, catalog, economy, tick, ["destroyer", "destroyer", "corvette_asw", "flak_cruiser"])
 		"mixed":
 			_spend_weighted(side, catalog, economy, tick, ["gunboat", "corvette_asw", "destroyer", "flak_cruiser", "submarine_shallow", "hovercraft", "minelayer", "INCOME", "battleship_flagship", "carrier"])
 		"level_ai":
-			_spend_weighted(side, catalog, economy, tick, ["gunboat", "destroyer", "submarine_shallow", "hovercraft", "corvette_asw", "flak_cruiser", "INCOME"])
+			_spend_weighted(side, catalog, economy, tick, ["gunboat", "destroyer", "submarine_shallow", "hovercraft", "corvette_asw", "flak_cruiser", "midget_sub", "submarine_deep", "INCOME", "battleship_flagship"])
 		_:
 			push_error("Strategies: unknown strategy_id %s" % strategy_id)
 
@@ -30,14 +30,17 @@ static func mono_strategy_id(unit_id: String) -> String:
 static func decide_mono(unit_id: String, side: Dictionary, catalog: Catalog, economy: Dictionary, tick: int) -> void:
 	_spend_repeat(side, catalog, economy, tick, [unit_id])
 
-## eco needs a couple of early defenders before it dumps gold into upgrades,
-## or it dies to the opening rush before its economy ever pays off.
-static func _eco(side: Dictionary, catalog: Catalog, economy: Dictionary, tick: int) -> void:
+## eco needs early defenders before it dumps gold into upgrades, or it
+## dies to the opening rush before its economy ever pays off. The seed
+## scales with the enemy's income so eco holds a proportionate wall on
+## later, richer levels instead of folding in the opening minutes.
+static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy: Dictionary, tick: int) -> void:
 	var defender_hp := 0.0
 	for uid in side["stacks"].keys():
 		defender_hp += float(side["stacks"][uid]["alive_hp"])
 	var udef: Dictionary = catalog.units.get("gunboat", {})
-	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0
+	var threat_scale: float = max(1.0, float(level.get("enemy_income_base", 12.0)) / 12.0)
+	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0 * threat_scale
 	if defender_hp < seed_target and side["roster"].has("gunboat"):
 		MatchSim.enqueue_build(side, catalog, "gunboat", economy, tick)
 		return

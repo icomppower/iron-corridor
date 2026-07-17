@@ -2,7 +2,7 @@
   "id": "level_02",
   "name": "Strait Contest",
   "turn_budget": 390,
-  "enemy_income_base": 14.0,
+  "enemy_income_base": 12.5,
   "enemy_base_hp": 1300,
   "player_base_hp": 680,
   "enemy_roster": [
