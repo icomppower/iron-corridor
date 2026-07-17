@@ -49,7 +49,11 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 	if defender_hp < seed_target and side["roster"].has(seed_unit):
 		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
 		return
-	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "gunboat", "corvette_asw"])
+	# Payoff phase: once INCOME/INSTALLMENT max out the fair-share credit
+	# flows into heavy units bought at full discount — eco's identity is
+	# a slow start that converts into a late-game hammer, not a wall that
+	# survives on gunboats and never closes.
+	_spend_weighted(side, catalog, economy, tick, ["INCOME", "INSTALLMENT", "destroyer", "corvette_asw", "battleship_flagship"])
 
 ## Fair-share purchase scheduler: every priority item accrues "credit" each
 ## decision call, and we always spend on the most-overdue item. If the
