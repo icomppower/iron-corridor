@@ -3,7 +3,11 @@ extends RefCounted
 ## Scripted policies driving a side's spend decisions. Pure functions of
 ## sim state — no hidden RNG, no Node deps. Called once per decision interval.
 
-const MAX_MONO_BUYS_PER_DECISION := 6
+## Mono probes must spend at the same throughput as the scripted
+## strategies — at 6 buys/decision the mono harness had double the APM
+## ceiling and Balance2 was comparing spam-at-2x-speed against
+## strategies-at-1x, flagging throughput rather than composition.
+const MAX_MONO_BUYS_PER_DECISION := 3
 const MAX_WEIGHTED_BUYS_PER_DECISION := 3
 
 static func decide(strategy_id: String, side: Dictionary, catalog: Catalog, level: Dictionary, economy: Dictionary, tick: int) -> void:
