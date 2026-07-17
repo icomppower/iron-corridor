@@ -2,7 +2,7 @@
   "id": "level_03",
   "name": "Convoy Gauntlet",
   "turn_budget": 400,
-  "enemy_income_base": 16.0,
+  "enemy_income_base": 16.5,
   "enemy_base_hp": 1650,
   "player_base_hp": 710,
   "enemy_roster": [

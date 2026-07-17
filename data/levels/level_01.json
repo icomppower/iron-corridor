@@ -1,7 +1,7 @@
 {
   "id": "level_01",
   "name": "Coastal Approach",
-  "turn_budget": 380,
+  "turn_budget": 420,
   "enemy_income_base": 10.0,
   "enemy_base_hp": 1050,
   "player_base_hp": 650,
