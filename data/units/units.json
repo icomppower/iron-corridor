@@ -194,7 +194,7 @@
     "cost": 55,
     "spawn_time": 3.0,
     "hp": 18.0,
-    "attack": 11.0,
+    "attack": 10.0,
     "weapon": "torpedo",
     "detect": [
       "surface"
