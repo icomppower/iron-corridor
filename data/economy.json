@@ -2,14 +2,14 @@
   "income_base": 12.0,
   "starting_gold": 150.0,
   "income_upgrade": {
-    "cost_base": 100.0,
-    "cost_growth": 1.6,
+    "cost_base": 150.0,
+    "cost_growth": 1.8,
     "income_bonus_pct": 0.15,
     "max_level": 6
   },
   "installment_upgrade": {
-    "cost_base": 80.0,
-    "cost_growth": 1.5,
+    "cost_base": 120.0,
+    "cost_growth": 1.7,
     "cost_reduction_pct": 0.08,
     "max_level": 5
   },
