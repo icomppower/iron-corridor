@@ -49,7 +49,10 @@ static func _eco(side: Dictionary, catalog: Catalog, level: Dictionary, economy:
 	var seed_unit := "corvette_asw" if side["roster"].has("corvette_asw") else "gunboat"
 	var udef: Dictionary = catalog.units.get(seed_unit, {})
 	var threat_scale: float = max(1.6, float(level.get("enemy_income_base", 12.0)) / 12.0)
-	var seed_target: float = float(udef.get("hp", 40.0)) * 3.0 * threat_scale
+	# 2x, not 3x: the thinner opening wall is eco's real cost for the
+	# upgrade detour — at 3x eco was strictly better than turtle
+	# everywhere (0.99 aggregate, insensitive to level knobs).
+	var seed_target: float = float(udef.get("hp", 40.0)) * 2.0 * threat_scale
 	if defender_hp < seed_target and side["roster"].has(seed_unit):
 		MatchSim.enqueue_build(side, catalog, seed_unit, economy, tick)
 		return
