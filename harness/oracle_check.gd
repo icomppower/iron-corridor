@@ -164,20 +164,33 @@ func _check_weather_bounded(data: Dictionary, catalog: Catalog) -> void:
 		for strat in strat_map.keys():
 			var wwr: Dictionary = strat_map[strat]["weather_win_rate"]
 			var wruns: Dictionary = strat_map[strat].get("weather_runs", {})
-			var vals := []
+			var bins := []
 			for w in wwr.keys():
 				# Rare-weather bins (a few dozen of 500 runs) differ from the
 				# common bins by pure sampling noise — only bins with enough
 				# runs carry signal about the weather effect itself.
 				if int(wruns.get(w, 0)) >= MIN_WEATHER_BIN_RUNS:
-					vals.append(float(wwr[w]))
-			if vals.size() < 2:
+					bins.append({"rate": float(wwr[w]), "n": int(wruns[w])})
+			if bins.size() < 2:
 				continue
-			var lo: float = vals.min()
-			var hi: float = vals.max()
-			if hi - lo > MAX_WEATHER_SWING:
+			var lo: Dictionary = bins[0]
+			var hi: Dictionary = bins[0]
+			for b in bins:
+				if b["rate"] < lo["rate"]: lo = b
+				if b["rate"] > hi["rate"]: hi = b
+			# The enemy-readiness jitter makes per-run outcomes genuinely
+			# random, so ~100-run bins carry binomial noise of up to ~0.05
+			# stderr each; identical-outcome configs were observed to differ
+			# 0.18 between bins from sampling alone. Flag only swings the
+			# data can actually attribute to weather: the observed gap must
+			# exceed the threshold by two standard errors of the difference.
+			var se_lo: float = sqrt(max(lo["rate"] * (1.0 - lo["rate"]), 0.0025) / lo["n"])
+			var se_hi: float = sqrt(max(hi["rate"] * (1.0 - hi["rate"]), 0.0025) / hi["n"])
+			var noise: float = 2.0 * sqrt(se_lo * se_lo + se_hi * se_hi)
+			var gap: float = hi["rate"] - lo["rate"]
+			if gap > MAX_WEATHER_SWING + noise:
 				any_fail = true
-				_fail("Oracle6 %s/%s: weather swings win_rate by %.2f (>%.2f) %s" % [level_id, strat, hi - lo, MAX_WEATHER_SWING, wwr])
+				_fail("Oracle6 %s/%s: weather swings win_rate by %.2f (>%.2f+noise %.2f) %s" % [level_id, strat, gap, MAX_WEATHER_SWING, noise, wwr])
 	if not any_fail:
 		_pass("Oracle6: weather never swings any (level,strategy) win_rate by more than %.0f%%" % (MAX_WEATHER_SWING * 100))
 
