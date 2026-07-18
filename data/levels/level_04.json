@@ -2,7 +2,7 @@
   "id": "level_04",
   "name": "Deepwater Blockade",
   "turn_budget": 410,
-  "enemy_income_base": 15.5,
+  "enemy_income_base": 15.0,
   "enemy_base_hp": 1650,
   "player_base_hp": 740,
   "enemy_roster": [
@@ -13,7 +13,8 @@
     "hovercraft",
     "patrol_plane",
     "corvette_asw",
-    "flak_cruiser"
+    "flak_cruiser",
+    "midget_sub"
   ],
   "player_roster": [
     "gunboat",
@@ -41,5 +42,14 @@
     "fog": 0.2,
     "night": 0.2,
     "storm": 0.15
-  }
+  },
+  "enemy_priority": [
+    "gunboat",
+    "corvette_asw",
+    "submarine_shallow",
+    "destroyer",
+    "INCOME",
+    "INSTALLMENT"
+  ],
+  "enemy_starting_gold": 164.0
 }
