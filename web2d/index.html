@@ -1188,8 +1188,21 @@ function updateCamera(dt) {
 function updateAim(dt) {
   if (!st || st.result) return;
   var speed = 700;
-  if (keys['arrowup']) S.adjustAim(st, speed * dt);
-  if (keys['arrowdown']) S.adjustAim(st, -speed * dt);
+  var changed = false;
+  if (keys['arrowup']) { S.adjustAim(st, speed * dt); changed = true; }
+  if (keys['arrowdown']) { S.adjustAim(st, -speed * dt); changed = true; }
+  if (changed) {
+    // keep the aim marker in view (with margin) while actively adjusting range,
+    // so the player can see the shot reach all the way out to the aimed point
+    var targetX = st.baseL.x + st.playerAim.range;
+    var viewW = W / scale();
+    var margin = viewW * 0.15;
+    var leftEdge = cam.x + margin, rightEdge = cam.x + viewW - margin;
+    if (targetX > rightEdge) cam.x += (targetX - rightEdge);
+    else if (targetX < leftEdge) cam.x -= (leftEdge - targetX);
+    clampCam();
+    cam.follow = false; cam.manualT = 6;
+  }
 }
 
 // ---------- main loop
