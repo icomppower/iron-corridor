@@ -45,7 +45,7 @@
     light_cruiser:    { name: 'Light Cruiser',  type: 'ship', hp: 250,  speed: 34,  cost: 330,  cd: 11.5, detect: 480, minDist: 220, len: 66, weapons: ['g152', 'g152', 'g152', 'g152', 'aa', 'aa'] },
     heavy_cruiser:    { name: 'Heavy Cruiser',  type: 'ship', hp: 300,  speed: 32,  cost: 460,  cd: 14,   detect: 750, minDist: 600, len: 74, weapons: ['g203', 'g203', 'g203', 'aa', 'aa', 'msl'] },
     hybrid_cruiser:   { name: 'Hybrid Cruiser', type: 'ship', hp: 275,  speed: 32,  cost: 480,  cd: 14,   detect: 620, minDist: 250, len: 72, weapons: ['g203', 'g203', 'aa', 'aa'], hangar: 1, hangarUnit: 'helicopter', unlock: 4 },
-    battleship:       { name: 'Battleship',     type: 'ship', hp: 2500, speed: 29,  cost: 950,  cd: 25,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
+    battleship:       { name: 'Battleship',     type: 'ship', hp: 3400, speed: 29,  cost: 950,  cd: 25,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
     hybrid_battleship:{ name: 'Hybrid Battleship', type: 'ship', hp: 2250, speed: 29, cost: 1000, cd: 26, detect: 620, minDist: 400, len: 106, weapons: ['g381', 'g381', 'aa', 'aa', 'aa', 'mg'], hangar: 2, hangarUnit: 'torpedo_bomber', unlock: 6 },
     carrier:          { name: 'Carrier',        type: 'ship', hp: 1800, speed: 30,  cost: 1150, cd: 28,   detect: 800, minDist: 700, len: 120, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 3, hangarUnit: 'mixed' },
     atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 28,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 }
