@@ -144,8 +144,8 @@ function startStage(i) {
 var keys = {};
 var UNIT_KEYS = ['1','2','3','4','5','6','7','8','9','0','q','w','e','r'];
 var UNIT_ORDER = ['patrol_ship','frigate','submarine','fighter','torpedo_bomber','helicopter','destroyer','light_cruiser','heavy_cruiser','hybrid_cruiser','battleship','hybrid_battleship','carrier','atomic_submarine'];
-var UPG_KEYS = ['z','x','c','v','b','n'];
-var UPG_ORDER = ['supply_line','salvage','arsenal','repair','warehouse','fortress'];
+var UPG_KEYS = ['z','x','c','v','b'];
+var UPG_ORDER = ['supply_line','salvage','arsenal','repair','fortress'];
 var UNIT_DESC = {
   patrol_ship: 'Cheap scout — 1x machine gun, fast to spam early',
   frigate: 'ASW escort — depth charges + 2x MG, hunts submarines',
@@ -167,7 +167,6 @@ var UPG_DESC = {
   salvage: '+10% bonus gold from every enemy kill, per level',
   arsenal: '-8% build cooldown on all ships, per level',
   repair: '+4 home base HP regen per second, per level',
-  warehouse: '+750 max gold storage, per level',
   fortress: '+12% base gun damage per level; extra guns at level 2 & 4'
 };
 
@@ -891,7 +890,7 @@ function drawHUD(t) {
   ctx.font = 'bold 17px monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffd76a';
-  ctx.fillText('₲ ' + Math.floor(st.gold) + ' / ' + st.goldCap, W / 2, mm.y + mm.h + 22);
+  ctx.fillText('₲ ' + Math.floor(st.gold), W / 2, mm.y + mm.h + 22);
   ctx.font = '12px monospace';
   ctx.fillStyle = '#9fc3e8';
   ctx.fillText('+' + st.income + '/s   ' + st.stage.name + (fast ? '  ⏩2x' : '') + (paused ? '  ⏸' : ''), W / 2, mm.y + mm.h + 38);
@@ -1073,7 +1072,7 @@ function drawBuildBar(t) {
   ctx.font = '10px monospace';
   ctx.fillStyle = 'rgba(150,180,210,0.6)';
   ctx.textAlign = 'left';
-  ctx.fillText('1-0,Q,W,E,R build ships · Z,X,C,V,B,N upgrade installations', 10, H - 8);
+  ctx.fillText('1-0,Q,W,E,R build ships · Z,X,C,V,B upgrade installations', 10, H - 8);
 }
 
 function drawUnitButton(x, y, w, h, id, key, t) {
@@ -1150,7 +1149,7 @@ function drawTooltip(x, y, w, lines) {
   }
 }
 
-var UPG_SHORT = { supply_line: 'Supply', salvage: 'Salvage', arsenal: 'Arsenal', repair: 'Repair', warehouse: 'Cargo', fortress: 'Fortress' };
+var UPG_SHORT = { supply_line: 'Supply', salvage: 'Salvage', arsenal: 'Arsenal', repair: 'Repair', fortress: 'Fortress' };
 function drawUpgradeButton(x, y, w, h, key, hotkey) {
   var def = S.UPGRADES[key];
   var lvl = st.upgrades[key];

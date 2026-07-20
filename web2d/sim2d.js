@@ -96,7 +96,6 @@
     salvage:     { name: 'Salvage Team', cost: 150, growth: 1.5, max: 7 },  // +10% kill bounty
     arsenal:     { name: 'Arsenal', cost: 180, growth: 1.45, max: 9 },      // -8% build cooldown
     repair:      { name: 'Repair Dock', cost: 168, growth: 1.45, max: 9 },  // +4 base hp/s
-    warehouse:   { name: 'Warehouse', cost: 108, growth: 1.6, max: 8 },     // +750 gold cap
     fortress:    { name: 'Fortress', cost: 210, growth: 1.45, max: 9 }      // +12% base guns, +1 gun @2/4
   };
 
@@ -165,8 +164,8 @@
     var state = {
       t: 0, dt: DT, stageIdx: stageIdx, stage: stage, rng: rng,
       units: [], projectiles: [], events: [], result: null,
-      gold: 300 + stageIdx * 150, income: 32, goldCap: 1200 + stageIdx * 100,
-      upgrades: { supply_line: 0, salvage: 0, arsenal: 0, repair: 0, warehouse: 0, fortress: 0 },
+      gold: 300 + stageIdx * 150, income: 32, // no storage cap - gold accumulates without limit
+      upgrades: { supply_line: 0, salvage: 0, arsenal: 0, repair: 0, fortress: 0 },
       buildCd: {},       // unitId -> remaining s
       queue: [],
       baseL: { side: 'L', x: 90, hp: BASE_HP, maxHp: BASE_HP, weapons: baseWeapons(1 + Math.floor(stageIdx / 3), false), invincible: false },
@@ -340,7 +339,7 @@
       if (u.side === 'R') {
         state.stats.kills++;
         var bounty = (u.def.cost || 300) * (0.16 + 0.10 * state.upgrades.salvage);
-        state.gold = Math.min(state.goldCap, state.gold + bounty);
+        state.gold += bounty;
       } else state.stats.losses++;
       if (u.boss) { state.bossDown = true; state.baseR.invincible = false; state.events.push({ type: 'bossdown' }); }
     }
@@ -677,7 +676,6 @@
     state.gold -= c;
     state.upgrades[key]++;
     if (key === 'supply_line') state.income += 16;
-    if (key === 'warehouse') state.goldCap += 750;
     if (key === 'fortress' && (state.upgrades.fortress === 2 || state.upgrades.fortress === 4)) {
       state.baseL.weapons.push({ key: 'fort', cool: 2 });
     }
@@ -741,13 +739,10 @@
     }
     var baseDamaged = state.baseL.hp < state.baseL.maxHp * 0.97;   // chip damage: buy repair
     var baseCritical = state.baseL.hp < state.baseL.maxHp * 0.85;  // real assault: defensive spam
-    // economy first: supply line to max while base is safe; warehouse when the cap blocks us
+    // economy first: supply line to max while base is safe (gold has no storage cap)
     if (!baseDamaged || state.upgrades.supply_line < 3) {
-      if (state.upgrades.supply_line < UPGRADES.supply_line.max) {
-        var sc = upgradeCost(state, 'supply_line');
-        if (sc > state.goldCap * 0.85 && state.upgrades.warehouse < UPGRADES.warehouse.max) {
-          if (state.gold >= upgradeCost(state, 'warehouse')) { tryUpgrade(state, 'warehouse'); return; }
-        } else if (state.gold >= sc) { tryUpgrade(state, 'supply_line'); return; }
+      if (state.upgrades.supply_line < UPGRADES.supply_line.max && state.gold >= upgradeCost(state, 'supply_line')) {
+        tryUpgrade(state, 'supply_line'); return;
       }
     }
     if (state.upgrades.salvage < 2 && state.t > 200 && state.gold > upgradeCost(state, 'salvage') * 1.8) tryUpgrade(state, 'salvage');
@@ -788,8 +783,8 @@
       }
     }
     if (capital === 'battleship' && state.gold > UNITS.battleship.cost * 0.5) {
-      // spend cap-overflow surplus on escorts so battleships never push alone
-      if (state.gold > state.goldCap * 0.85 && (mine.escort || 0) < mine.big * 2 + 2) {
+      // spend a large idle surplus on escorts so battleships never push alone
+      if (state.gold > UNITS.battleship.cost * 3 && (mine.escort || 0) < mine.big * 2 + 2) {
         if (tryBuild(state, 'light_cruiser') || tryBuild(state, 'destroyer')) return;
       }
       // otherwise keep banking; only break for an actual base assault
@@ -810,7 +805,7 @@
     if (state.result) return;
     dt = dt || DT;
     state.t += dt;
-    state.gold = Math.min(state.goldCap, state.gold + state.income * dt);
+    state.gold += state.income * dt;
     for (var k in state.buildCd) if (state.buildCd[k] > 0) state.buildCd[k] -= dt;
     if (state.playerGunCool > 0) state.playerGunCool -= dt;
     stepB52(state, dt);
