@@ -35,20 +35,20 @@
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
   var UNITS = {
-    patrol_ship:      { name: 'Patrol Boat',    type: 'ship', hp: 40,   speed: 90,  cost: 60,   cd: 3,    detect: 300, minDist: 200, len: 34, weapons: ['mg'] },
-    frigate:          { name: 'Frigate',        type: 'ship', hp: 100,  speed: 60,  cost: 130,  cd: 5,    detect: 300, minDist: 180, len: 44, weapons: ['mg', 'mg', 'dc'] },
-    submarine:        { name: 'Submarine',      type: 'sub',  hp: 100,  speed: 25,  cost: 160,  cd: 6.5,  detect: 400, minDist: 150, len: 46, depth: 55, weapons: ['torp'] },
-    fighter:          { name: 'Fighter',        type: 'air',  hp: 60,   speed: 150, cost: 140,  cd: 6,    detect: 250, minDist: 0,   len: 26, alt: -170, weapons: ['mg', 'mg'] },
-    torpedo_bomber:   { name: 'Torpedo Bomber', type: 'air',  hp: 100,  speed: 120, cost: 180,  cd: 6.5,  detect: 400, minDist: 0,   len: 30, alt: -130, weapons: ['atorp'] },
-    helicopter:       { name: 'Helicopter',     type: 'air',  hp: 80,   speed: 60,  cost: 170,  cd: 6.5,  detect: 400, minDist: 100, len: 26, alt: -100, weapons: ['mg', 'dc'] },
-    destroyer:        { name: 'Destroyer',      type: 'ship', hp: 140,  speed: 37,  cost: 220,  cd: 9.5,  detect: 300, minDist: 200, len: 56, weapons: ['torp', 'mg', 'aa', 'aa'] },
-    light_cruiser:    { name: 'Light Cruiser',  type: 'ship', hp: 250,  speed: 34,  cost: 330,  cd: 13,   detect: 480, minDist: 220, len: 66, weapons: ['g152', 'g152', 'g152', 'g152', 'aa', 'aa'] },
-    heavy_cruiser:    { name: 'Heavy Cruiser',  type: 'ship', hp: 300,  speed: 32,  cost: 460,  cd: 16,   detect: 750, minDist: 600, len: 74, weapons: ['g203', 'g203', 'g203', 'aa', 'aa', 'msl'] },
-    hybrid_cruiser:   { name: 'Hybrid Cruiser', type: 'ship', hp: 275,  speed: 32,  cost: 480,  cd: 16,   detect: 620, minDist: 250, len: 72, weapons: ['g203', 'g203', 'aa', 'aa'], hangar: 1, hangarUnit: 'helicopter', unlock: 4 },
-    battleship:       { name: 'Battleship',     type: 'ship', hp: 2500, speed: 29,  cost: 950,  cd: 30,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
-    hybrid_battleship:{ name: 'Hybrid Battleship', type: 'ship', hp: 2250, speed: 29, cost: 1000, cd: 31, detect: 620, minDist: 400, len: 106, weapons: ['g381', 'g381', 'aa', 'aa', 'aa', 'mg'], hangar: 2, hangarUnit: 'torpedo_bomber', unlock: 6 },
-    carrier:          { name: 'Carrier',        type: 'ship', hp: 1800, speed: 30,  cost: 1150, cd: 33,   detect: 800, minDist: 700, len: 120, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 3, hangarUnit: 'mixed' },
-    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 33,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 }
+    patrol_ship:      { name: 'Patrol Boat',    type: 'ship', hp: 40,   speed: 90,  cost: 60,   cd: 1.8,  detect: 300, minDist: 200, len: 34, weapons: ['mg'] },
+    frigate:          { name: 'Frigate',        type: 'ship', hp: 100,  speed: 60,  cost: 130,  cd: 3,    detect: 300, minDist: 180, len: 44, weapons: ['mg', 'mg', 'dc'] },
+    submarine:        { name: 'Submarine',      type: 'sub',  hp: 100,  speed: 25,  cost: 160,  cd: 4,    detect: 400, minDist: 150, len: 46, depth: 55, weapons: ['torp'] },
+    fighter:          { name: 'Fighter',        type: 'air',  hp: 60,   speed: 150, cost: 140,  cd: 3.5,  detect: 250, minDist: 0,   len: 26, alt: -170, weapons: ['mg', 'mg'] },
+    torpedo_bomber:   { name: 'Torpedo Bomber', type: 'air',  hp: 100,  speed: 120, cost: 180,  cd: 4,    detect: 400, minDist: 0,   len: 30, alt: -130, weapons: ['atorp'] },
+    helicopter:       { name: 'Helicopter',     type: 'air',  hp: 80,   speed: 60,  cost: 170,  cd: 4,    detect: 400, minDist: 100, len: 26, alt: -100, weapons: ['mg', 'dc'] },
+    destroyer:        { name: 'Destroyer',      type: 'ship', hp: 140,  speed: 37,  cost: 220,  cd: 6,    detect: 300, minDist: 200, len: 56, weapons: ['torp', 'mg', 'aa', 'aa'] },
+    light_cruiser:    { name: 'Light Cruiser',  type: 'ship', hp: 250,  speed: 34,  cost: 330,  cd: 8,    detect: 480, minDist: 220, len: 66, weapons: ['g152', 'g152', 'g152', 'g152', 'aa', 'aa'] },
+    heavy_cruiser:    { name: 'Heavy Cruiser',  type: 'ship', hp: 300,  speed: 32,  cost: 460,  cd: 10,   detect: 750, minDist: 600, len: 74, weapons: ['g203', 'g203', 'g203', 'aa', 'aa', 'msl'] },
+    hybrid_cruiser:   { name: 'Hybrid Cruiser', type: 'ship', hp: 275,  speed: 32,  cost: 480,  cd: 10,   detect: 620, minDist: 250, len: 72, weapons: ['g203', 'g203', 'aa', 'aa'], hangar: 1, hangarUnit: 'helicopter', unlock: 4 },
+    battleship:       { name: 'Battleship',     type: 'ship', hp: 2500, speed: 29,  cost: 950,  cd: 18,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
+    hybrid_battleship:{ name: 'Hybrid Battleship', type: 'ship', hp: 2250, speed: 29, cost: 1000, cd: 19, detect: 620, minDist: 400, len: 106, weapons: ['g381', 'g381', 'aa', 'aa', 'aa', 'mg'], hangar: 2, hangarUnit: 'torpedo_bomber', unlock: 6 },
+    carrier:          { name: 'Carrier',        type: 'ship', hp: 1800, speed: 30,  cost: 1150, cd: 20,   detect: 800, minDist: 700, len: 120, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 3, hangarUnit: 'mixed' },
+    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 20,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 }
   };
 
   var BOSSES = {
@@ -165,7 +165,7 @@
     var state = {
       t: 0, dt: DT, stageIdx: stageIdx, stage: stage, rng: rng,
       units: [], projectiles: [], events: [], result: null,
-      gold: 300 + stageIdx * 150, income: 16, goldCap: 1200 + stageIdx * 100,
+      gold: 300 + stageIdx * 150, income: 32, goldCap: 1200 + stageIdx * 100,
       upgrades: { supply_line: 0, salvage: 0, arsenal: 0, repair: 0, warehouse: 0, fortress: 0 },
       buildCd: {},       // unitId -> remaining s
       queue: [],
@@ -676,7 +676,7 @@
     if (state.gold < c) return false;
     state.gold -= c;
     state.upgrades[key]++;
-    if (key === 'supply_line') state.income += 8;
+    if (key === 'supply_line') state.income += 16;
     if (key === 'warehouse') state.goldCap += 600;
     if (key === 'fortress' && (state.upgrades.fortress === 2 || state.upgrades.fortress === 4)) {
       state.baseL.weapons.push({ key: 'fort', cool: 2 });
@@ -770,12 +770,18 @@
     }
     if ((airCritical || counts.air > mine.aa + 1) && tryBuild(state, 'fighter')) return;
     if (subUrgent && (tryBuild(state, 'destroyer') || tryBuild(state, 'frigate') || tryBuild(state, 'helicopter'))) return;
-    // capital push: save up, don't drip-feed the meat grinder
+    // capital push: save up, don't drip-feed the meat grinder. Cap how many
+    // big ships can be alive at once - without it a strong economy just
+    // piles up an ever-growing fleet that holds at the front line instead
+    // of ever finishing the fight, since capital ships stop advancing the
+    // moment anything is in range, however weak. Past the cap, surplus gold
+    // banks toward upgrades instead of more units that would only queue up.
+    var bigCap = 14;
     var capital = state.t > 210 ? 'battleship' : (state.t > 90 ? 'light_cruiser' : null);
-    if (state.stageIdx >= 6 && state.t > 300 && mine.big > 1 && state.gold >= UNITS.carrier.cost) {
+    if (state.stageIdx >= 6 && state.t > 300 && mine.big > 1 && mine.big < bigCap && state.gold >= UNITS.carrier.cost) {
       if (tryBuild(state, 'carrier')) return;
     }
-    if (capital && state.gold >= UNITS[capital].cost) {
+    if (capital && mine.big < bigCap && state.gold >= UNITS[capital].cost) {
       if (tryBuild(state, capital)) {
         // escort trickle follows automatically on later ticks
         return;
