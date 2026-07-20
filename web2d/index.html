@@ -55,7 +55,7 @@ function wy(y) { return seaY() + y * scale(); }
 
 // ---------- effects / audio state
 var effects = [], wrecks = [], shakeT = 0, shakeMag = 0, bossBannerT = 0, bossBannerName = '';
-var b52Run = null;
+var b52Run = null, b52BannerT = 0;
 var muted = false;
 
 // ---------- audio
@@ -135,7 +135,7 @@ function startStage(i) {
   st = S.createMatch(i, { seed: qsSeed || ((Date.now() % 100000) + 1), unlockedStages: unlocked });
   mode = 'play';
   paused = false; fast = false; batteryFiring = true;
-  effects = []; wrecks = []; bossBannerT = 0; b52Run = null;
+  effects = []; wrecks = []; bossBannerT = 0; b52Run = null; b52BannerT = 0;
   cam.x = 0; cam.follow = true; cam.manualT = 0;
   overlayT = 0;
 }
@@ -163,8 +163,8 @@ var UNIT_DESC = {
   atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile'
 };
 var UPG_DESC = {
-  supply_line: '+6 gold income per second, per level',
-  salvage: '+8% bonus gold from every enemy kill, per level',
+  supply_line: '+8 gold income per second, per level',
+  salvage: '+10% bonus gold from every enemy kill, per level',
   arsenal: '-8% build cooldown on all ships, per level',
   repair: '+4 home base HP regen per second, per level',
   warehouse: '+600 max gold storage, per level',
@@ -304,6 +304,8 @@ function consumeEvents() {
         break;
       case 'b52launch':
         b52Run = { startX: e.startX, endX: e.endX, startT: st.t, duration: e.duration };
+        cam.follow = false; cam.manualT = e.duration + 1.5;
+        b52BannerT = 3;
         break;
     }
   }
@@ -897,6 +899,14 @@ function drawHUD(t) {
     ctx.fillStyle = '#ffb45a';
     ctx.fillText('AUTO DEMO — 自動演示', W / 2, mm.y + mm.h + 54);
   }
+  // B-52 strike banner
+  if (b52BannerT > 0) {
+    ctx.fillStyle = 'rgba(90,50,10,' + Math.min(0.75, b52BannerT) + ')';
+    ctx.fillRect(0, H * 0.22, W, 40);
+    ctx.fillStyle = '#ffd8a0';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('✈ B-52 STRIKE INCOMING — 空中轟炸支援', W / 2, H * 0.22 + 27);
+  }
   // boss banner
   if (bossBannerT > 0) {
     ctx.fillStyle = 'rgba(120,10,10,' + Math.min(0.75, bossBannerT) + ')';
@@ -1281,6 +1291,16 @@ function updateCamera(dt) {
   if (keys['arrowleft'] || keys['a']) { cam.x -= 520 * dt; cam.follow = false; cam.manualT = 6; }
   if (keys['arrowright'] || keys['d']) { cam.x += 520 * dt; cam.follow = false; cam.manualT = 6; }
   clampCam();
+  if (b52Run && !AUTO) {
+    // the whole point of the strike is watching it sweep the map - follow
+    // the bomber itself for the run's duration rather than wherever the
+    // front line happens to be, so it's never happening off-screen
+    var prog = Math.max(0, Math.min(1, (st.t - b52Run.startT) / b52Run.duration));
+    var bx = b52Run.startX + (b52Run.endX - b52Run.startX) * prog;
+    var target2 = Math.max(0, Math.min(S.WORLD - W / scale(), bx - (W / scale()) * 0.5));
+    cam.x += (target2 - cam.x) * Math.min(1, dt * 3);
+    return;
+  }
   if (cam.manualT > 0) { cam.manualT -= dt; if (cam.manualT <= 0) cam.follow = true; }
   if (cam.follow && st) {
     // front line: foremost player unit, else own base
@@ -1372,6 +1392,7 @@ function frame(ms) {
   ctx.restore();
 
   if (bossBannerT > 0) bossBannerT -= dt;
+  if (b52BannerT > 0) b52BannerT -= dt;
   drawHUD(t);
   if (paused && !AUTO) drawPausedOverlay();
   if (mode === 'victory' || mode === 'defeat') drawEndOverlay(t);
