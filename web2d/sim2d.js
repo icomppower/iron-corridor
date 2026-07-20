@@ -92,12 +92,12 @@
 
   // ---- upgrades (player): [baseCost, growth, maxLvl]
   var UPGRADES = {
-    supply_line: { name: 'Supply Line', cost: 200, growth: 1.45, max: 12 }, // +8 income/s
-    salvage:     { name: 'Salvage Team', cost: 250, growth: 1.7, max: 7 },  // +10% kill bounty
-    arsenal:     { name: 'Arsenal', cost: 300, growth: 1.6, max: 9 },       // -8% build cooldown
-    repair:      { name: 'Repair Dock', cost: 280, growth: 1.6, max: 9 },   // +4 base hp/s
-    warehouse:   { name: 'Warehouse', cost: 180, growth: 1.7, max: 8 },     // +600 gold cap
-    fortress:    { name: 'Fortress', cost: 350, growth: 1.6, max: 9 }       // +12% base guns, +1 gun @2/4
+    supply_line: { name: 'Supply Line', cost: 120, growth: 1.4, max: 12 },  // +8 income/s
+    salvage:     { name: 'Salvage Team', cost: 150, growth: 1.5, max: 7 },  // +10% kill bounty
+    arsenal:     { name: 'Arsenal', cost: 180, growth: 1.45, max: 9 },      // -8% build cooldown
+    repair:      { name: 'Repair Dock', cost: 168, growth: 1.45, max: 9 },  // +4 base hp/s
+    warehouse:   { name: 'Warehouse', cost: 108, growth: 1.6, max: 8 },     // +750 gold cap
+    fortress:    { name: 'Fortress', cost: 210, growth: 1.45, max: 9 }      // +12% base guns, +1 gun @2/4
   };
 
   function mulberry32(seed) {
@@ -677,7 +677,7 @@
     state.gold -= c;
     state.upgrades[key]++;
     if (key === 'supply_line') state.income += 16;
-    if (key === 'warehouse') state.goldCap += 600;
+    if (key === 'warehouse') state.goldCap += 750;
     if (key === 'fortress' && (state.upgrades.fortress === 2 || state.upgrades.fortress === 4)) {
       state.baseL.weapons.push({ key: 'fort', cool: 2 });
     }
