@@ -81,7 +81,7 @@
     stg('Stage 6 — Rotor Storm', 'richelieu',
       [['patrol_ship', 9.6, 5], ['frigate', 12, 8], ['submarine', 16.8, 20], ['fighter', 19.2, 25], ['helicopter', 22.8, 40], ['torpedo_bomber', 22.8, 45], ['destroyer', 24, 50], ['light_cruiser', 36, 80], ['heavy_cruiser', 48, 120]], null, 2),
     stg('Stage 7 — Flattop', 'midway',
-      [['patrol_ship', 8, 5], ['frigate', 10.3, 8], ['submarine', 14.9, 18], ['fighter', 16.1, 20], ['helicopter', 20.7, 35], ['torpedo_bomber', 19.5, 40], ['destroyer', 20.7, 45], ['light_cruiser', 29.9, 70], ['heavy_cruiser', 41.4, 100], ['carrier', 92, 180]], null, 3),
+      [['patrol_ship', 8, 5], ['frigate', 10.3, 8], ['submarine', 14.9, 18], ['fighter', 20.9, 20], ['helicopter', 26.9, 35], ['torpedo_bomber', 25.4, 40], ['destroyer', 20.7, 45], ['light_cruiser', 29.9, 70], ['heavy_cruiser', 41.4, 100], ['carrier', 92, 180]], null, 3),
     stg('Stage 8 — Battle Line', 'iowa',
       [['patrol_ship', 7.7, 4], ['frigate', 8.8, 7], ['submarine', 12.1, 15], ['fighter', 13.2, 18], ['helicopter', 17.6, 30], ['torpedo_bomber', 16.5, 35], ['destroyer', 17.6, 40], ['light_cruiser', 26.4, 60], ['heavy_cruiser', 33, 90], ['battleship', 66, 150]],
       { interval: 16, jitter: 6, delay: 120, pool: ['patrol_ship', 'frigate', 'submarine', 'fighter'] }, 3),
@@ -112,10 +112,6 @@
 
   var nextId = 1;
 
-  function makeWeapon(key) {
-    return { key: key, t: WEAPONS[key].reload * (0.3 + 0.7 * Math.random ? 0 : 0) + 0.001, cool: 0 };
-  }
-
   function spawnUnit(state, side, unitId, opts) {
     var def = UNITS[unitId] || BOSSES[unitId];
     var isBoss = !!BOSSES[unitId];
@@ -131,7 +127,7 @@
       speed: def.speed * (isBoss ? 1 : 0.95 + state.rng() * 0.1),
       weapons: def.weapons.map(function (k) { return { key: k, cool: WEAPONS[k].reload * state.rng() * 0.5 }; }),
       hangarT: 6, children: 0, parent: opts && opts.parent ? opts.parent : 0,
-      passT: 0
+      passT: 0, bobPhase: state.rng() * 6.283
     };
     state.units.push(u);
     state.events.push({ type: 'spawn', x: u.x, y: u.y, side: side, unit: unitId });
@@ -477,7 +473,7 @@
         // helicopters hover at minDist
         if (u.def.minDist && tgtA && Math.abs(tgtA.x - u.x) < u.def.minDist) move = false;
         if (move) u.x += u.dir * u.speed * dt;
-        u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.id) * 8;
+        u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.bobPhase) * 8;
       } else {
         if (engaged && holdDist <= Math.max(minD, 60)) move = false;
         // hold column behind ally
@@ -499,7 +495,7 @@
       if (hangar && !u.dead) {
         u.hangarT -= dt;
         if (u.hangarT <= 0 && u.children < hangar) {
-          u.hangarT = 13;
+          u.hangarT = 19;
           var kind = u.def.hangarUnit === 'mixed' ? (state.rng() < 0.5 ? 'fighter' : 'torpedo_bomber') : u.def.hangarUnit;
           var c = spawnUnit(state, u.side, kind, { parent: u.id });
           c.x = u.x; c.y = -30; u.children++;
@@ -573,8 +569,21 @@
     for (var i = 0; i < st.spawns.length; i++) {
       state.spawnT[i] -= dt;
       if (state.spawnT[i] <= 0) {
+        var unitId = st.spawns[i][0];
         state.spawnT[i] = st.spawns[i][1] * esc;
-        spawnUnit(state, 'R', st.spawns[i][0], {});
+        // hangar ships (carriers) keep producing escort aircraft the whole
+        // time they're alive; stacking several at once compounds into an
+        // unmanageable air swarm, so the periodic spawner replaces a fallen
+        // one instead of piling up more of the same hangar ship
+        var hdef = UNITS[unitId];
+        if (hdef && hdef.hangar) {
+          var alreadyAlive = false;
+          for (var j = 0; j < state.units.length; j++) {
+            if (state.units[j].side === 'R' && state.units[j].unit === unitId && !state.units[j].dead) { alreadyAlive = true; break; }
+          }
+          if (alreadyAlive) continue;
+        }
+        spawnUnit(state, 'R', unitId, {});
       }
     }
     if (st.random) {
@@ -677,10 +686,22 @@
     if (baseDamaged && state.upgrades.repair < 4 && state.gold >= upgradeCost(state, 'repair')) tryUpgrade(state, 'repair');
     if (state.baseL.hp < state.baseL.maxHp * 0.8 && state.upgrades.fortress < 4 && state.gold >= upgradeCost(state, 'fortress')) tryUpgrade(state, 'fortress');
     if (state.stageIdx >= 5 && state.t < 90 && state.upgrades.fortress < (state.stageIdx >= 7 ? 3 : 2) && state.gold >= upgradeCost(state, 'fortress')) { tryUpgrade(state, 'fortress'); return; }
-    // counters, capped so they don't eat the savings
-    if (counts.subs > mine.asw && mine.asw < Math.min(8, counts.subs + 1) &&
-        (tryBuild(state, 'destroyer') || tryBuild(state, 'frigate') || tryBuild(state, 'helicopter'))) return;
-    if (counts.air > mine.aa + 1 && tryBuild(state, 'fighter')) return;
+    // counters, capped so they don't eat the savings. Priority is dynamic:
+    // whichever threat has the bigger deficit goes first, so a persistent
+    // sub presence can't perpetually starve the air response (or vice
+    // versa) tick after tick while the other threat quietly snowballs.
+    var subDeficit = counts.subs - mine.asw;
+    var airDeficit = counts.air - mine.aa;
+    var subUrgent = subDeficit > 0 && mine.asw < Math.min(8, counts.subs + 1);
+    // destroyer/frigate double as general surface defense, so they stay the
+    // default pick under mixed pressure; only divert to fighters when air is
+    // a genuine runaway well past what sub pressure alone would explain
+    var airCritical = airDeficit > 5 && airDeficit > subDeficit * 2.2;
+    if (subUrgent && !airCritical) {
+      if (tryBuild(state, 'destroyer') || tryBuild(state, 'frigate') || tryBuild(state, 'helicopter')) return;
+    }
+    if ((airCritical || counts.air > mine.aa + 1) && tryBuild(state, 'fighter')) return;
+    if (subUrgent && (tryBuild(state, 'destroyer') || tryBuild(state, 'frigate') || tryBuild(state, 'helicopter'))) return;
     // capital push: save up, don't drip-feed the meat grinder
     var capital = state.t > 210 ? 'battleship' : (state.t > 90 ? 'light_cruiser' : null);
     if (state.stageIdx >= 6 && state.t > 300 && mine.big > 1 && state.gold >= UNITS.carrier.cost) {
