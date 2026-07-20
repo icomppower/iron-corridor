@@ -29,6 +29,10 @@ var params = new URLSearchParams(location.search);
 var AUTO = params.get('auto') === '1';
 var qsStage = parseInt(params.get('stage') || '0', 10);
 var qsSeed = parseInt(params.get('seed') || '0', 10);
+// touch-capable AND small-screened - a touchscreen laptop/2-in-1 with a
+// desktop-sized window keeps the desktop UI (mouse-friendly either way);
+// only phones/small tablets get the dedicated touch layout
+var isMobile = (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0) && Math.min(W, H) < 500;
 
 // ---------- persistence
 function loadProgress() {
@@ -136,6 +140,7 @@ function startStage(i) {
   mode = 'play';
   paused = false; fast = false; batteryFiring = true;
   effects = []; wrecks = []; bossBannerT = 0; b52Run = null; b52BannerT = 0;
+  mobileTab = 'build'; mobilePanelScroll = { build: 0, upgrade: 0 };
   cam.x = 0; cam.follow = true; cam.manualT = 0;
   overlayT = 0;
 }
@@ -214,10 +219,10 @@ function handleEndKey() {
 var drag = null, mouse = { x: 0, y: 0 };
 cv.addEventListener('mousedown', function (e) { pointerDown(e.clientX, e.clientY); audio(); });
 cv.addEventListener('mousemove', function (e) { mouse.x = e.clientX; mouse.y = e.clientY; pointerMove(e.clientX, e.clientY); });
-window.addEventListener('mouseup', function () { drag = null; });
+window.addEventListener('mouseup', function (e) { pointerUp(e.clientX, e.clientY); });
 cv.addEventListener('touchstart', function (e) { var t = e.touches[0]; pointerDown(t.clientX, t.clientY); audio(); e.preventDefault(); }, { passive: false });
 cv.addEventListener('touchmove', function (e) { var t = e.touches[0]; pointerMove(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
-window.addEventListener('touchend', function () { drag = null; });
+window.addEventListener('touchend', function (e) { var t = e.changedTouches[0]; pointerUp(t ? t.clientX : 0, t ? t.clientY : 0); });
 cv.addEventListener('wheel', function (e) {
   if (mode !== 'play') return;
   cam.x += e.deltaY * 1.5 + e.deltaX * 1.5;
@@ -226,15 +231,22 @@ cv.addEventListener('wheel', function (e) {
 }, { passive: false });
 
 var uiButtons = [];  // rebuilt every frame: {x,y,w,h,cb,id}
+function inRect(x, y, r) { return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
 function pointerDown(x, y) {
+  if (isMobile && !AUTO && mode === 'play') {
+    var aim = mobileAimRect();
+    if (inRect(x, y, aim)) { drag = { aimSlider: true }; mobileSetAimFromX(x, aim); return; }
+    var panel = mobilePanelRect();
+    if (inRect(x, y, panel)) { drag = { panel: true, startX: x, startY: y, scrollAt: mobilePanelScroll[mobileTab], moved: false }; return; }
+  }
   for (var i = 0; i < uiButtons.length; i++) {
     var b = uiButtons[i];
-    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { b.cb(); return; }
+    if (inRect(x, y, b)) { b.cb(); return; }
   }
   if (mode === 'play') {
     // minimap?
     var mm = minimapRect();
-    if (y >= mm.y && y <= mm.y + mm.h && x >= mm.x && x <= mm.x + mm.w) {
+    if (inRect(x, y, mm)) {
       var t = (x - mm.x) / mm.w;
       cam.x = t * S.WORLD - (W / scale()) / 2; clampCam();
       cam.follow = false; cam.manualT = 8;
@@ -245,7 +257,15 @@ function pointerDown(x, y) {
   }
 }
 function pointerMove(x, y) {
+  mouse.x = x; mouse.y = y;
   if (!drag || mode !== 'play') return;
+  if (drag.aimSlider) { mobileSetAimFromX(x, mobileAimRect()); return; }
+  if (drag.panel) {
+    var dx = x - drag.startX;
+    if (Math.abs(dx) > 6) drag.moved = true;
+    if (drag.moved) mobilePanelScroll[mobileTab] = Math.max(0, drag.scrollAt - dx);
+    return;
+  }
   if (drag.minimap) {
     var mm = minimapRect();
     var t = (x - mm.x) / mm.w;
@@ -254,6 +274,16 @@ function pointerMove(x, y) {
   }
   cam.x = drag.camX - (x - drag.x) / scale();
   clampCam(); cam.follow = false; cam.manualT = 8;
+}
+function pointerUp(x, y) {
+  if (drag && drag.panel && !drag.moved) {
+    // released without dragging - treat as a tap on whatever's underneath
+    for (var i = 0; i < uiButtons.length; i++) {
+      var b = uiButtons[i];
+      if (inRect(x, y, b)) { b.cb(); break; }
+    }
+  }
+  drag = null;
 }
 function clampCam() { cam.x = Math.max(0, Math.min(S.WORLD - W / scale(), cam.x)); }
 function minimapRect() {
@@ -852,6 +882,203 @@ function drawEffects(dt, t) {
   }
 }
 
+// ==================== MOBILE UI ====================
+// A separate touch-first HUD, not just a shrunk desktop layout. Desktop
+// controls the player has none of on a touchscreen: arrow-key battery aim
+// and the Space fire-toggle. Mobile gets a drag slider for aim (jump-to or
+// drag-to-set, not incremental hold) and a big tappable fire button, plus a
+// tabbed, horizontally-scrollable build/upgrade panel sized for real touch
+// targets instead of squeezing every item into view at once.
+var mobileTab = 'build';
+var mobilePanelScroll = { build: 0, upgrade: 0 };
+
+function mobileDockRect() {
+  var h = Math.max(118, Math.min(150, H * 0.32));
+  return { x: 0, y: H - h, w: W, h: h };
+}
+function mobileAimRect() {
+  var dock = mobileDockRect();
+  var row1h = 46;
+  var rightW = 176; // fire + b52 buttons + gaps
+  return { x: 8, y: dock.y + 6, w: Math.max(90, W - 16 - rightW), h: row1h - 8 };
+}
+function mobileFireRect() {
+  var aim = mobileAimRect();
+  return { x: aim.x + aim.w + 8, y: aim.y, w: 82, h: aim.h };
+}
+function mobileB52Rect() {
+  var fire = mobileFireRect();
+  return { x: fire.x + fire.w + 8, y: fire.y, w: 82, h: fire.h };
+}
+function mobileTabRect(which) {
+  var dock = mobileDockRect();
+  var row1h = 46;
+  var tabW = 46, tabH = (dock.h - row1h - 6) / 2 - 2;
+  var idx = which === 'build' ? 0 : 1;
+  return { x: 8, y: dock.y + row1h + 4 + idx * (tabH + 4), w: tabW, h: tabH };
+}
+function mobilePanelRect() {
+  var dock = mobileDockRect();
+  var row1h = 46;
+  var tab = mobileTabRect('build');
+  return { x: tab.x + tab.w + 6, y: dock.y + row1h + 4, w: W - (tab.x + tab.w + 6) - 8, h: dock.h - row1h - 8 };
+}
+function mobileSetAimFromX(x, rect) {
+  if (!st || !st.playerAim) return;
+  var frac = Math.max(0, Math.min(1, (x - rect.x) / rect.w));
+  var a = st.playerAim;
+  S.adjustAim(st, (a.min + (a.max - a.min) * frac) - a.range);
+}
+
+function drawMobileHUD(t) {
+  uiButtons.length = 0;
+  if (!st) return;
+  var baseBarW = Math.max(100, Math.min(180, W * 0.28));
+  drawBaseBar(8, 6, st.baseL, '#5aa2e8', 'HOME', baseBarW);
+  drawBaseBar(W - baseBarW - 8, 6, st.baseR, '#e85a5a', 'ENEMY', baseBarW);
+  // gold, compact, centered between the two base bars
+  ctx.font = 'bold 15px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd76a';
+  ctx.fillText('₲ ' + Math.floor(st.gold), W / 2, 22);
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#9fc3e8';
+  ctx.fillText('+' + st.income + '/s · ' + st.stage.name, W / 2, 36);
+  // small pause/speed/sound cluster, top-right corner below enemy bar
+  var sw = 30, sh = 22, sx = W - 8 - sw, sy = 44;
+  ctlButton(sx, sy, sw, sh, paused ? '▶' : '⏸', paused, function () { paused = !paused; });
+  sy += sh + 3;
+  ctlButton(sx, sy, sw, sh, fast ? '2×' : '1×', fast, function () { fast = !fast; });
+  sy += sh + 3;
+  ctlButton(sx, sy, sw, sh, muted ? '🔇' : '🔊', muted, function () { muted = !muted; });
+  // boss / B-52 banners still show (reuse desktop drawing, centered)
+  if (bossBannerT > 0) {
+    ctx.fillStyle = 'rgba(120,10,10,' + Math.min(0.75, bossBannerT) + ')';
+    ctx.fillRect(0, H * 0.28, W, 34);
+    ctx.fillStyle = '#ffe0c0';
+    ctx.font = 'bold 15px monospace';
+    ctx.fillText(bossBannerName.indexOf('SUNK') >= 0 ? bossBannerName : '⚠ FLAGSHIP ' + bossBannerName.toUpperCase(), W / 2, H * 0.28 + 23);
+  }
+  if (b52BannerT > 0) {
+    ctx.fillStyle = 'rgba(90,50,10,' + Math.min(0.75, b52BannerT) + ')';
+    ctx.fillRect(0, H * 0.28, W, 30);
+    ctx.fillStyle = '#ffd8a0';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('✈ B-52 STRIKE INCOMING', W / 2, H * 0.28 + 21);
+  }
+  drawMobileDock(t);
+}
+
+function drawMobileDock(t) {
+  var dock = mobileDockRect();
+  ctx.fillStyle = 'rgba(8,14,22,0.92)';
+  ctx.fillRect(dock.x, dock.y, dock.w, dock.h);
+  ctx.strokeStyle = 'rgba(100,140,180,0.35)';
+  ctx.beginPath(); ctx.moveTo(0, dock.y); ctx.lineTo(W, dock.y); ctx.stroke();
+
+  // aim slider
+  var aim = mobileAimRect();
+  var firing = batteryFiring;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(aim.x, aim.y, aim.w, aim.h);
+  ctx.strokeStyle = firing ? 'rgba(255,180,80,0.7)' : 'rgba(120,160,200,0.5)';
+  ctx.strokeRect(aim.x, aim.y, aim.w, aim.h);
+  if (st && st.playerAim) {
+    var a = st.playerAim, frac = (a.range - a.min) / (a.max - a.min);
+    var hx = aim.x + aim.w * frac;
+    ctx.fillStyle = firing ? '#ffb450' : '#78c8ff';
+    ctx.fillRect(aim.x + 2, aim.y + aim.h / 2 - 3, Math.max(0, hx - aim.x - 2), 6);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(hx - 4, aim.y + 3, 8, aim.h - 6);
+  }
+  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = '#cfe4f8';
+  ctx.textAlign = 'left';
+  ctx.fillText('◀ DRAG TO AIM ▶', aim.x + 6, aim.y - 4);
+
+  // fire toggle
+  var fire = mobileFireRect();
+  ctx.fillStyle = firing ? 'rgba(200,110,40,0.9)' : 'rgba(24,32,44,0.9)';
+  ctx.fillRect(fire.x, fire.y, fire.w, fire.h);
+  ctx.strokeStyle = firing ? '#ffb450' : 'rgba(120,160,200,0.6)';
+  ctx.strokeRect(fire.x, fire.y, fire.w, fire.h);
+  ctx.fillStyle = firing ? '#fff' : '#9fc3e8';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(firing ? '🔥 FIRING' : '⏹ HOLD', fire.x + fire.w / 2, fire.y + fire.h / 2 + 4);
+  uiButtons.push({ x: fire.x, y: fire.y, w: fire.w, h: fire.h, cb: function () { batteryFiring = !batteryFiring; } });
+
+  // B-52 button (reuse desktop's drawB52Button, it already pushes its own uiButton)
+  var b52 = mobileB52Rect();
+  drawB52Button(b52.x, b52.y, b52.w, b52.h, b52.w >= 68);
+
+  // tabs
+  ['build', 'upgrade'].forEach(function (tab) {
+    var r = mobileTabRect(tab);
+    var active = mobileTab === tab;
+    ctx.fillStyle = active ? 'rgba(60,90,130,0.9)' : 'rgba(20,28,38,0.85)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = active ? '#6ca2d8' : 'rgba(90,110,140,0.5)';
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = active ? '#e8f2fc' : '#7c8ea2';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(tab === 'build' ? '⚔' : '⬆', r.x + r.w / 2, r.y + r.h / 2 + 6);
+    uiButtons.push({ x: r.x, y: r.y, w: r.w, h: r.h, cb: function () { mobileTab = tab; } });
+  });
+
+  // scrollable item panel
+  var panel = mobilePanelRect();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(panel.x, panel.y, panel.w, panel.h); ctx.clip();
+  var items = mobileTab === 'build' ? UNIT_ORDER : UPG_ORDER;
+  var keys = mobileTab === 'build' ? UNIT_KEYS : UPG_KEYS;
+  var itemW = mobileTab === 'build' ? 70 : 110;
+  var itemH = panel.h - 6;
+  var gap = 6;
+  var contentW = items.length * (itemW + gap) - gap;
+  var maxScroll = Math.max(0, contentW - panel.w);
+  mobilePanelScroll[mobileTab] = Math.max(0, Math.min(maxScroll, mobilePanelScroll[mobileTab]));
+  var scrollX = mobilePanelScroll[mobileTab];
+  for (var i = 0; i < items.length; i++) {
+    var ix = panel.x + i * (itemW + gap) - scrollX;
+    if (ix + itemW < panel.x || ix > panel.x + panel.w) continue;
+    if (mobileTab === 'build') drawUnitButton(ix, panel.y + 3, itemW, itemH, items[i], keys[i].toUpperCase(), t);
+    else drawUpgradeButton(ix, panel.y + 3, itemW, itemH, items[i], keys[i].toUpperCase());
+  }
+  ctx.restore();
+  // scroll hint fade edges
+  if (scrollX > 0) {
+    var g1 = ctx.createLinearGradient(panel.x, 0, panel.x + 18, 0);
+    g1.addColorStop(0, 'rgba(8,14,22,0.9)'); g1.addColorStop(1, 'rgba(8,14,22,0)');
+    ctx.fillStyle = g1; ctx.fillRect(panel.x, panel.y, 18, panel.h);
+  }
+  if (scrollX < maxScroll) {
+    var g2 = ctx.createLinearGradient(panel.x + panel.w - 18, 0, panel.x + panel.w, 0);
+    g2.addColorStop(0, 'rgba(8,14,22,0)'); g2.addColorStop(1, 'rgba(8,14,22,0.9)');
+    ctx.fillStyle = g2; ctx.fillRect(panel.x + panel.w - 18, panel.y, 18, panel.h);
+  }
+}
+
+function drawRotatePrompt() {
+  ctx.fillStyle = 'rgba(6,10,16,0.96)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8f2fc';
+  ctx.font = 'bold 22px monospace';
+  ctx.save();
+  ctx.translate(W / 2, H / 2 - 30);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = 'bold 30px monospace';
+  ctx.fillText('⟳', 0, 12);
+  ctx.restore();
+  ctx.fillText('Rotate to landscape', W / 2, H / 2 + 30);
+  ctx.font = '13px monospace';
+  ctx.fillStyle = '#9fc3e8';
+  ctx.fillText('Iron Corridor plays best in landscape', W / 2, H / 2 + 54);
+}
+// ==================== END MOBILE UI ====================
+
 // ---------- HUD
 function drawHUD(t) {
   uiButtons.length = 0;
@@ -1341,6 +1568,7 @@ function frame(ms) {
   var dt = Math.min(0.1, t - lastT); lastT = t;
   sfxBudget = 7;
 
+  if (isMobile && !AUTO && H > W) { drawRotatePrompt(); return; }
   if (mode === 'title') { drawTitle(t); return; }
   if (!st) return;
 
@@ -1392,7 +1620,7 @@ function frame(ms) {
 
   if (bossBannerT > 0) bossBannerT -= dt;
   if (b52BannerT > 0) b52BannerT -= dt;
-  drawHUD(t);
+  if (isMobile && !AUTO) drawMobileHUD(t); else drawHUD(t);
   if (paused && !AUTO) drawPausedOverlay();
   if (mode === 'victory' || mode === 'defeat') drawEndOverlay(t);
 }
