@@ -41,7 +41,7 @@ var unlocked = loadProgress();
 var mode = 'title';       // title | play | victory | defeat
 var st = null;            // sim state
 var stageIdx = 0;
-var paused = false, fast = false;
+var paused = false, fast = false, batteryFiring = true;
 var overlayT = 0;
 
 // ---------- camera
@@ -127,7 +127,7 @@ function startStage(i) {
   stageIdx = i;
   st = S.createMatch(i, { seed: qsSeed || ((Date.now() % 100000) + 1), unlockedStages: unlocked });
   mode = 'play';
-  paused = false; fast = false;
+  paused = false; fast = false; batteryFiring = true;
   effects = []; wrecks = []; bossBannerT = 0;
   cam.x = 0; cam.follow = true; cam.manualT = 0;
   overlayT = 0;
@@ -183,7 +183,8 @@ window.addEventListener('keydown', function (e) {
   if (k === 'p') paused = !paused;
   if (k === 'f') fast = !fast;
   if (k === 'l') { muted = !muted; }
-  if (k === ' ' || k === 'arrowup' || k === 'arrowdown') e.preventDefault();
+  if (k === ' ') { if (!e.repeat) batteryFiring = !batteryFiring; e.preventDefault(); }
+  if (k === 'arrowup' || k === 'arrowdown') e.preventDefault();
   if (k === 'escape') { mode = 'title'; }
   audio();
 });
@@ -587,7 +588,7 @@ function drawAimMarker() {
   var targetX = st.baseL.x + st.playerAim.range;
   var x = wx(targetX);
   if (x < -40 || x > W + 40) return;
-  var firing = !!keys[' '];
+  var firing = batteryFiring;
   var y0 = wy(0), topY = y0 - px(50);
   ctx.strokeStyle = firing ? 'rgba(255,180,80,0.85)' : 'rgba(120,200,255,0.5)';
   ctx.lineWidth = 1.5;
@@ -607,8 +608,8 @@ function drawBatteryHUD() {
   if (!st || AUTO || !st.playerAim) return;
   var a = st.playerAim;
   var frac = (a.range - a.min) / (a.max - a.min);
-  var bx = 14, by = 48, bw = 220, bh = 20;
-  var firing = !!keys[' '];
+  var bx = 14, by = 48, bw = 246, bh = 20;
+  var firing = batteryFiring;
   ctx.fillStyle = 'rgba(6,12,20,0.75)';
   ctx.fillRect(bx, by, bw, bh);
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -618,7 +619,7 @@ function drawBatteryHUD() {
   ctx.font = 'bold 10px monospace';
   ctx.textAlign = 'left';
   ctx.fillStyle = firing ? '#ffb450' : '#9fc3e8';
-  ctx.fillText((firing ? '🔥 FIRING' : '⚙ BATTERY') + '  ↑↓ aim · hold SPACE to fire', bx + 4, by + 10);
+  ctx.fillText((firing ? '🔥 FIRING' : '⏹ HOLD FIRE') + '  ↑↓ aim · SPACE toggle', bx + 4, by + 10);
 }
 
 function drawBase(b, side, t, stage) {
@@ -661,7 +662,7 @@ function drawBase(b, side, t, stage) {
   if (side === 'L' && st && st.playerAim) {
     var aimFrac = (st.playerAim.range - st.playerAim.min) / (st.playerAim.max - st.playerAim.min);
     var elev = 0.1 + aimFrac * 0.65;
-    ctx.fillStyle = keys[' '] ? '#e8a860' : '#1a2028';
+    ctx.fillStyle = batteryFiring ? '#e8a860' : '#1a2028';
     ctx.beginPath(); ctx.arc(-3, -102, 7, 0, 7); ctx.fill();
     ctx.save();
     ctx.translate(-3, -102);
@@ -870,7 +871,7 @@ function drawHUD(t) {
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · hold SPACE to fire · Esc quit', 14, H - (AUTO ? 12 : 148));
+  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery (auto-fires) · SPACE stop/start · Esc quit', 14, H - (AUTO ? 12 : 148));
   if (!AUTO) drawBuildBar(t);
 }
 
@@ -1207,7 +1208,7 @@ function frame(ms) {
     var guard = 0;
     while (simAcc >= S.DT && guard < 8) {
       if (AUTO) S.autoPlay(st);
-      else if (keys[' ']) S.fireBattery(st);
+      else if (batteryFiring) S.fireBattery(st);
       S.step(st);
       consumeEvents();
       simAcc -= S.DT; guard++;
