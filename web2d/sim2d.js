@@ -118,16 +118,31 @@
     var dir = side === 'L' ? 1 : -1;
     var baseX = side === 'L' ? 170 : WORLD - 170;
     var type = isBoss ? 'ship' : def.type;
+    var spawnX = baseX + dir * (20 + state.rng() * 30);
+    if (type === 'ship' || type === 'sub') {
+      // don't materialize on top of a unit still lingering at the spawn
+      // point - step further back into the queue until there's clear room
+      var guard = 0, blocked = true;
+      while (blocked && guard < 40) {
+        blocked = false;
+        for (var si = 0; si < state.units.length; si++) {
+          var o = state.units[si];
+          if (o.side !== side || o.dead || o.type !== type) continue;
+          if (Math.abs(o.x - spawnX) < def.len / 2 + o.def.len / 2 + 4) { blocked = true; break; }
+        }
+        if (blocked) { spawnX -= dir * 24; guard++; }
+      }
+    }
     var u = {
       id: nextId++, side: side, unit: unitId, def: def, boss: isBoss,
       type: type,
-      x: baseX + dir * (20 + state.rng() * 30),
+      x: spawnX,
       y: type === 'air' ? def.alt + (state.rng() * 40 - 20) : (type === 'sub' ? def.depth : 0),
       dir: dir, hp: def.hp, maxHp: def.hp,
       speed: def.speed * (isBoss ? 1 : 0.95 + state.rng() * 0.1),
       weapons: def.weapons.map(function (k) { return { key: k, cool: WEAPONS[k].reload * state.rng() * 0.5 }; }),
       hangarT: 6, children: 0, parent: opts && opts.parent ? opts.parent : 0,
-      passT: 0, bobPhase: state.rng() * 6.283
+      passT: 0, bobPhase: state.rng() * 6.283, holding: false
     };
     state.units.push(u);
     state.events.push({ type: 'spawn', x: u.x, y: u.y, side: side, unit: unitId });
@@ -475,8 +490,13 @@
         if (move) u.x += u.dir * u.speed * dt;
         u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.bobPhase) * 8;
       } else {
-        if (engaged && holdDist <= Math.max(minD, 60)) move = false;
-        // hold column behind ally
+        var combatHold = engaged && holdDist <= Math.max(minD, 60);
+        if (combatHold) move = false;
+        // avoid overlapping an ally that's still transiting, but flow past
+        // one that has stopped to fight - otherwise a single long-range
+        // ship parked at its engagement distance permanently bottlenecks
+        // every reinforcement spawned behind it into an ever-growing,
+        // motionless queue that never reaches its own effective range
         if (move) {
           var aheadAlly = null, aheadD = 1e9;
           for (var j = 0; j < units.length; j++) {
@@ -485,9 +505,10 @@
             var relA = (a.x - u.x) * (u.side === 'L' ? 1 : -1);
             if (relA > 0 && relA < aheadD) { aheadD = relA; aheadAlly = a; }
           }
-          if (aheadAlly && aheadD < u.def.len / 2 + aheadAlly.def.len / 2 + 6) move = false;
+          if (aheadAlly && !aheadAlly.holding && aheadD < u.def.len / 2 + aheadAlly.def.len / 2 + 6) move = false;
           if (move) u.x += (u.side === 'L' ? 1 : -1) * u.speed * dt;
         }
+        u.holding = combatHold;
         u.x = Math.max(60, Math.min(WORLD - 60, u.x));
       }
       // hangar
