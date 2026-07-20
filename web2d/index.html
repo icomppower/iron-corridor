@@ -60,11 +60,13 @@ var muted = false;
 // ---------- audio
 var AC = null, master = null;
 function audio() {
-  if (!AC) {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-    master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
-  }
-  if (AC.state === 'suspended') AC.resume();
+  try {
+    if (!AC) {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+    }
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) { AC = null; }
   return AC;
 }
 function noiseBuf(ac, dur) {
@@ -142,24 +144,24 @@ window.addEventListener('keydown', function (e) {
   var k = e.key.toLowerCase();
   keys[k] = true;
   if (mode === 'title') {
-    if (k === 'enter') { audio(); startStage(unlocked - 1); }
+    if (k === 'enter') { startStage(unlocked - 1); audio(); }
     return;
   }
   if (mode === 'victory' || mode === 'defeat') {
-    if (k === 'enter' || k === ' ') { audio(); handleEndKey(); }
+    if (k === 'enter' || k === ' ') { handleEndKey(); audio(); }
     return;
   }
   if (mode !== 'play') return;
-  audio();
   var ui = UNIT_KEYS.indexOf(k);
-  if (ui >= 0 && !AUTO) { tryBuildUI(UNIT_ORDER[ui]); e.preventDefault(); return; }
+  if (ui >= 0 && !AUTO) { tryBuildUI(UNIT_ORDER[ui]); audio(); e.preventDefault(); return; }
   var gi = UPG_KEYS.indexOf(k);
-  if (gi >= 0 && !AUTO) { tryUpgradeUI(UPG_ORDER[gi]); return; }
+  if (gi >= 0 && !AUTO) { tryUpgradeUI(UPG_ORDER[gi]); audio(); return; }
   if (k === 'p') paused = !paused;
   if (k === 'f') fast = !fast;
   if (k === 'l') { muted = !muted; }
   if (k === ' ') { cam.follow = !cam.follow; cam.manualT = 0; e.preventDefault(); }
   if (k === 'escape') { mode = 'title'; }
+  audio();
 });
 window.addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
 
@@ -178,10 +180,10 @@ function handleEndKey() {
 
 // mouse / touch
 var drag = null, mouse = { x: 0, y: 0 };
-cv.addEventListener('mousedown', function (e) { audio(); pointerDown(e.clientX, e.clientY); });
+cv.addEventListener('mousedown', function (e) { pointerDown(e.clientX, e.clientY); audio(); });
 cv.addEventListener('mousemove', function (e) { mouse.x = e.clientX; mouse.y = e.clientY; pointerMove(e.clientX, e.clientY); });
 window.addEventListener('mouseup', function () { drag = null; });
-cv.addEventListener('touchstart', function (e) { audio(); var t = e.touches[0]; pointerDown(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
+cv.addEventListener('touchstart', function (e) { var t = e.touches[0]; pointerDown(t.clientX, t.clientY); audio(); e.preventDefault(); }, { passive: false });
 cv.addEventListener('touchmove', function (e) { var t = e.touches[0]; pointerMove(t.clientX, t.clientY); e.preventDefault(); }, { passive: false });
 window.addEventListener('touchend', function () { drag = null; });
 cv.addEventListener('wheel', function (e) {
@@ -986,7 +988,7 @@ function drawTitle(t) {
     if (cleared) { ctx.fillStyle = '#8fd68f'; ctx.fillText('★ CLEARED', x + bw2 / 2, y + 71); }
     if (!locked) {
       (function (idx) {
-        uiButtons.push({ x: x, y: y, w: bw2, h: bh2, cb: function () { audio(); startStage(idx); } });
+        uiButtons.push({ x: x, y: y, w: bw2, h: bh2, cb: function () { startStage(idx); audio(); } });
       })(i);
     }
   }
