@@ -55,6 +55,7 @@ function wy(y) { return seaY() + y * scale(); }
 
 // ---------- effects / audio state
 var effects = [], wrecks = [], shakeT = 0, shakeMag = 0, bossBannerT = 0, bossBannerName = '';
+var b52Run = null;
 var muted = false;
 
 // ---------- audio
@@ -119,7 +120,13 @@ function sfx(kind) {
     case 'alarm': playTone(620, 0.35, 0.3, 'square'); setTimeout(function () { playTone(470, 0.35, 0.3, 'square'); }, 380); setTimeout(function () { playTone(620, 0.35, 0.3, 'square'); }, 760); break;
     case 'victory': [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { playTone(f, 0.35, 0.25, 'triangle'); }, i * 160); }); break;
     case 'defeat': [392, 330, 262, 196].forEach(function (f, i) { setTimeout(function () { playTone(f, 0.45, 0.25, 'triangle'); }, i * 200); }); break;
+    case 'b52launch': playTone(80, 1.2, 0.35, 'sawtooth', 0.7); playNoise(1.5, 300, 0.3, 0.6); break;
   }
+}
+
+function triggerB52() {
+  if (!st || st.result) return;
+  if (S.fireB52(st)) { sfx('b52launch'); audio(); } else sfx('deny');
 }
 
 // ---------- start match
@@ -128,7 +135,7 @@ function startStage(i) {
   st = S.createMatch(i, { seed: qsSeed || ((Date.now() % 100000) + 1), unlockedStages: unlocked });
   mode = 'play';
   paused = false; fast = false; batteryFiring = true;
-  effects = []; wrecks = []; bossBannerT = 0;
+  effects = []; wrecks = []; bossBannerT = 0; b52Run = null;
   cam.x = 0; cam.follow = true; cam.manualT = 0;
   overlayT = 0;
 }
@@ -185,6 +192,7 @@ window.addEventListener('keydown', function (e) {
   if (k === 'l') { muted = !muted; }
   if (k === ' ') { if (!e.repeat) batteryFiring = !batteryFiring; e.preventDefault(); }
   if (k === 'arrowup' || k === 'arrowdown') e.preventDefault();
+  if (k === 't' && !AUTO) triggerB52();
   if (k === 'escape') { mode = 'title'; }
   audio();
 });
@@ -294,6 +302,9 @@ function consumeEvents() {
         effects.push({ k: 'boom', x: e.x, y: -20, t: 0, dur: 1.5, size: 60 });
         sfx('bigexplosion'); shake(14);
         break;
+      case 'b52launch':
+        b52Run = { startX: e.startX, endX: e.endX, startT: st.t, duration: e.duration };
+        break;
     }
   }
   evs.length = 0;
@@ -376,11 +387,28 @@ function upperColor(u) {
   return u.side === 'L' ? '#4d6f8f' : '#7d4f4f';
 }
 
+function shipStackOffset(u) {
+  if (!st) return 0;
+  var idx = 0, count = 0;
+  for (var i = 0; i < st.units.length; i++) {
+    var o = st.units[i];
+    if (o.side !== u.side || o.type !== 'ship' || o.dead) continue;
+    if (Math.abs(o.x - u.x) < 22) { if (o.id < u.id) idx++; count++; }
+  }
+  if (count <= 1) return 0;
+  return (idx - (count - 1) / 2) * 7;
+}
+
 function drawUnit(u, t) {
   var x = wx(u.x), y;
   var s = scale();
   var bob = (u.type === 'ship') ? Math.sin(t * 1.6 + u.id * 1.7) * 2 * s : 0;
   y = wy(u.y) + bob;
+  // massing many ships at one point (a deliberate concentrated-firepower
+  // tactic, allowed for both sides) would otherwise render as one
+  // indistinguishable blob - nudge overlapping same-side ships apart on
+  // screen only, purely cosmetic, doesn't touch position/combat/hit tests
+  if (u.type === 'ship') y += shipStackOffset(u) * s;
   if (x < -160 || x > W + 160) return;
   ctx.save();
   ctx.translate(x, y);
@@ -604,23 +632,6 @@ function drawAimMarker() {
   ctx.closePath(); ctx.stroke();
 }
 
-function drawBatteryHUD() {
-  if (!st || AUTO || !st.playerAim) return;
-  var a = st.playerAim;
-  var frac = (a.range - a.min) / (a.max - a.min);
-  var bx = 14, by = 48, bw = 246, bh = 20;
-  var firing = batteryFiring;
-  ctx.fillStyle = 'rgba(6,12,20,0.75)';
-  ctx.fillRect(bx, by, bw, bh);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(bx + 4, by + 13, bw - 8, 5);
-  ctx.fillStyle = firing ? '#ffb450' : '#78c8ff';
-  ctx.fillRect(bx + 4, by + 13, (bw - 8) * frac, 5);
-  ctx.font = 'bold 10px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = firing ? '#ffb450' : '#9fc3e8';
-  ctx.fillText((firing ? '🔥 FIRING' : '⏹ HOLD FIRE') + '  ↑↓ aim · SPACE toggle', bx + 4, by + 10);
-}
 
 function drawBase(b, side, t, stage) {
   var x = wx(b.x), s = scale();
@@ -740,6 +751,32 @@ function drawProjectiles(t) {
   }
 }
 
+function drawB52(t) {
+  if (!b52Run) return;
+  var prog = (st.t - b52Run.startT) / b52Run.duration;
+  if (prog > 1.1) { b52Run = null; return; }
+  var worldX = b52Run.startX + (b52Run.endX - b52Run.startX) * Math.max(0, Math.min(1, prog));
+  var x = wx(worldX);
+  if (x < -150 || x > W + 150) return;
+  var s = scale();
+  var y = wy(-195);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillRect(-100, -1.5, 70, 3);
+  ctx.fillStyle = '#12161c';
+  ctx.beginPath();
+  ctx.moveTo(32, 0); ctx.lineTo(12, -5); ctx.lineTo(-30, -4); ctx.lineTo(-30, 4); ctx.lineTo(12, 5);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(2, 0); ctx.lineTo(-16, 24); ctx.lineTo(-22, 24); ctx.lineTo(-6, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(2, 0); ctx.lineTo(-16, -24); ctx.lineTo(-22, -24); ctx.lineTo(-6, 0); ctx.closePath(); ctx.fill();
+  ctx.fillRect(-28, -11, 4, 11);
+  ctx.restore();
+}
+
 function drawEffects(dt, t) {
   for (var i = effects.length - 1; i >= 0; i--) {
     var e = effects[i];
@@ -818,11 +855,12 @@ function drawEffects(dt, t) {
 function drawHUD(t) {
   uiButtons.length = 0;
   var s = scale();
-  // top bars: base hp
-  drawBaseBar(14, 12, st.baseL, '#5aa2e8', 'HOME BASE');
-  drawBaseBar(W - 234, 12, st.baseR, '#e85a5a', 'ENEMY BASE', true);
-  if (!AUTO) drawControlButtons();
-  if (!AUTO) drawBatteryHUD();
+  // top bars: base hp (width scales down on narrow screens so both bars +
+  // the second row below always fit without overlapping)
+  var baseBarW = Math.max(120, Math.min(220, W * 0.34));
+  drawBaseBar(14, 12, st.baseL, '#5aa2e8', 'HOME BASE', baseBarW);
+  drawBaseBar(W - baseBarW - 14, 12, st.baseR, '#e85a5a', 'ENEMY BASE', baseBarW);
+  if (!AUTO) drawSecondRow();
   // minimap
   var mm = minimapRect();
   ctx.fillStyle = 'rgba(6,12,20,0.75)';
@@ -871,16 +909,64 @@ function drawHUD(t) {
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery (auto-fires) · SPACE stop/start · Esc quit', 14, H - (AUTO ? 12 : 148));
+  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · SPACE stop/start · T: B-52 strike · Esc quit', 14, H - (AUTO ? 12 : buildBarHeight() + 44));
   if (!AUTO) drawBuildBar(t);
 }
 
-function drawControlButtons() {
-  var bw = 84, bh = 24, gap = 4;
-  var bx = W - bw - 14, by = 50;
-  ctlButton(bx, by, bw, bh, paused ? '▶ RESUME' : '⏸ PAUSE', paused, function () { paused = !paused; });
-  ctlButton(bx, by + bh + gap, bw, bh, fast ? '⏩ FAST 2×' : '▶ SPEED 1×', fast, function () { fast = !fast; });
-  ctlButton(bx, by + (bh + gap) * 2, bw, bh, muted ? '🔇 MUTED' : '🔊 SOUND', muted, function () { muted = !muted; });
+// battery status + pause/speed/sound as one horizontal row that scales its
+// button widths and label verbosity to whatever room is left after the two
+// base-hp bars, so it never overlaps them regardless of screen width
+function drawSecondRow() {
+  var y = 88, h = 24; // clear of the centered minimap + gold/income text block above
+  var x = 14;
+  if (st && st.playerAim) {
+    var firing = batteryFiring;
+    var bw1 = Math.max(60, Math.min(180, W * 0.3));
+    var showBar = bw1 >= 100;
+    ctx.fillStyle = 'rgba(6,12,20,0.75)';
+    ctx.fillRect(x, y, bw1, h);
+    ctx.fillStyle = firing ? '#ffb450' : '#78c8ff';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'left';
+    var label = showBar ? (firing ? '🔥 FIRING' : '⏹ HOLD') : (firing ? '🔥 FIRE' : '⏹ HOLD');
+    ctx.fillText(label, x + 5, y + (showBar ? 10 : h / 2 + 4));
+    if (showBar) {
+      var a = st.playerAim, frac = (a.range - a.min) / (a.max - a.min);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(x + 4, y + 15, bw1 - 8, 5);
+      ctx.fillStyle = firing ? '#ffb450' : '#78c8ff';
+      ctx.fillRect(x + 4, y + 15, (bw1 - 8) * frac, 5);
+    }
+    x += bw1 + 6;
+  }
+  var remaining = Math.max(0, W - x - 14);
+  var btnW = Math.max(30, Math.min(90, remaining / 4 - 6));
+  var wide = btnW >= 68;
+  ctlButton(x, y, btnW, h, paused ? (wide ? '▶ RESUME' : '▶') : (wide ? '⏸ PAUSE' : '⏸'), paused, function () { paused = !paused; });
+  x += btnW + 4;
+  ctlButton(x, y, btnW, h, fast ? (wide ? '⏩ 2×' : '2×') : (wide ? '▶ 1×' : '1×'), fast, function () { fast = !fast; });
+  x += btnW + 4;
+  ctlButton(x, y, btnW, h, muted ? '🔇' : '🔊', muted, function () { muted = !muted; });
+  x += btnW + 4;
+  drawB52Button(x, y, btnW, h, wide);
+}
+function drawB52Button(x, y, w, h, wide) {
+  var ready = st.b52Cool <= 0;
+  var label = ready ? (wide ? '✈ B-52 (T)' : '✈') : Math.ceil(st.b52Cool) + 's';
+  ctx.fillStyle = ready ? 'rgba(140,60,40,0.9)' : 'rgba(16,24,34,0.85)';
+  ctx.fillRect(x, y, w, h);
+  if (!ready) {
+    var frac = 1 - st.b52Cool / S.B52_COOLDOWN;
+    ctx.fillStyle = 'rgba(140,60,40,0.45)';
+    ctx.fillRect(x, y, w * frac, h);
+  }
+  ctx.strokeStyle = ready ? '#e88a5a' : 'rgba(120,160,200,0.6)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = ready ? '#ffe0c8' : '#cfe4f8';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 4);
+  uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { triggerB52(); } });
 }
 function ctlButton(x, y, w, h, label, active, cb) {
   ctx.fillStyle = active ? 'rgba(90,140,190,0.85)' : 'rgba(16,24,34,0.85)';
@@ -906,8 +992,9 @@ function drawPausedOverlay() {
   ctx.fillText('tap ▶ RESUME above, or press P', W / 2, H / 2 + 20);
 }
 
-function drawBaseBar(x, y, base, color, label, alignRight) {
-  var w = 220, h = 16;
+function drawBaseBar(x, y, base, color, label, w) {
+  w = w || 220;
+  var h = 16;
   ctx.fillStyle = 'rgba(6,12,20,0.75)';
   ctx.fillRect(x, y, w, h + 16);
   ctx.font = 'bold 10px monospace';
@@ -926,29 +1013,51 @@ function drawBaseBar(x, y, base, color, label, alignRight) {
 }
 
 var unitBtnCache = {};
+function buildBarHeight() {
+  var narrow = W < 900;
+  var rows = narrow ? 2 : 1;
+  return rows * (56 + 6) + 8 + (narrow ? 33 : 0) + 14;
+}
+
 function drawBuildBar(t) {
-  var bh = 104;
+  var n = UNIT_ORDER.length;
+  var narrow = W < 900;
+  var btnH = 56;
+  var rows = narrow ? 2 : 1;
+  var perRow = Math.ceil(n / rows);
+  var bh = buildBarHeight();
   var y0 = H - bh;
   ctx.fillStyle = 'rgba(8,14,22,0.88)';
   ctx.fillRect(0, y0, W, bh);
   ctx.strokeStyle = 'rgba(100,140,180,0.35)';
   ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
 
-  var n = UNIT_ORDER.length;
-  var upW = Math.max(228, Math.min(320, W * 0.2));
-  var bw = Math.min(74, (W - upW - 34) / n - 6);
-  var x = 10;
+  var upW = narrow ? 0 : Math.max(228, Math.min(320, W * 0.2));
+  var availW = narrow ? (W - 20) : (W - upW - 34);
+  var bw = Math.max(narrow ? 40 : 30, Math.min(74, availW / perRow - 6));
   for (var i = 0; i < n; i++) {
     var id = UNIT_ORDER[i];
-    drawUnitButton(x, y0 + 8, bw, 60, id, UNIT_KEYS[i].toUpperCase(), t);
-    x += bw + 6;
+    var col = i % perRow, row = Math.floor(i / perRow);
+    var x = 10 + col * (bw + 6);
+    var y = y0 + 8 + row * (btnH + 6);
+    drawUnitButton(x, y, bw, btnH, id, UNIT_KEYS[i].toUpperCase(), t);
   }
-  // upgrade buttons block, flush right
-  var ux = W - upW - 10;
-  var uw = upW / 3 - 6;
-  for (var g = 0; g < UPG_ORDER.length; g++) {
-    var col = g % 3, row = Math.floor(g / 3);
-    drawUpgradeButton(ux + col * (uw + 6), y0 + 8 + row * 31, uw, 27, UPG_ORDER[g], UPG_KEYS[g].toUpperCase());
+  // upgrade buttons: narrow screens get a full-width row below the unit
+  // grid; wide screens keep the 3x2 block flush right beside the units
+  if (narrow) {
+    var uy = y0 + 8 + rows * (btnH + 6);
+    var ugap = 6;
+    var uw = (W - 20 - ugap * (UPG_ORDER.length - 1)) / UPG_ORDER.length;
+    for (var g = 0; g < UPG_ORDER.length; g++) {
+      drawUpgradeButton(10 + g * (uw + ugap), uy, uw, 27, UPG_ORDER[g], UPG_KEYS[g].toUpperCase());
+    }
+  } else {
+    var ux = W - upW - 10;
+    var uw2 = upW / 3 - 6;
+    for (var g2 = 0; g2 < UPG_ORDER.length; g2++) {
+      var col2 = g2 % 3, row2 = Math.floor(g2 / 3);
+      drawUpgradeButton(ux + col2 * (uw2 + 6), y0 + 8 + row2 * 31, uw2, 27, UPG_ORDER[g2], UPG_KEYS[g2].toUpperCase());
+    }
   }
   // hint line
   ctx.font = '10px monospace';
@@ -1258,6 +1367,7 @@ function frame(ms) {
   for (i = 0; i < st.units.length; i++) { u = st.units[i]; if (u.type === 'ship') drawUnit(u, t); }
   drawProjectiles(t);
   for (i = 0; i < st.units.length; i++) { u = st.units[i]; if (u.type === 'air') drawUnit(u, t); }
+  drawB52(t);
   drawEffects(dt, t);
   ctx.restore();
 

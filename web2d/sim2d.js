@@ -169,9 +169,47 @@
       stats: { built: 0, kills: 0, losses: 0 },
       // player-manned fortress gun: manual elevation control, no auto-targeting
       playerAim: { range: 900, min: 150, max: WORLD / 2 - 60 },
-      playerGunCool: 0
+      playerGunCool: 0,
+      // B-52 carpet-bombing strike: player-triggered, long cooldown, sweeps
+      // the whole map from the player's base to the enemy's
+      b52Cool: 0, b52Queue: []
     };
     return state;
+  }
+
+  var B52_COOLDOWN = 120;
+  var B52_BOMB_DMG = 900; // ~50% of a carrier's 1800 hp per direct hit
+  var B52_BOMB_RADIUS = 85;
+
+  function fireB52(state) {
+    if (state.b52Cool > 0) return false;
+    state.b52Cool = B52_COOLDOWN;
+    var startX = state.baseL.x + 300;
+    var endX = state.baseR.x - 100;
+    var bombCount = 26;
+    var runDuration = 6.0; // seconds for the bomber to cross the whole map
+    for (var i = 0; i < bombCount; i++) {
+      var frac = i / (bombCount - 1);
+      state.b52Queue.push({ x: startX + (endX - startX) * frac, t: state.t + frac * runDuration });
+    }
+    state.events.push({ type: 'b52launch', startX: startX, endX: endX, duration: runDuration });
+    return true;
+  }
+
+  function stepB52(state, dt) {
+    if (state.b52Cool > 0) state.b52Cool -= dt;
+    for (var i = state.b52Queue.length - 1; i >= 0; i--) {
+      var q = state.b52Queue[i];
+      if (state.t < q.t) continue;
+      state.b52Queue.splice(i, 1);
+      state.events.push({ type: 'explosion', x: q.x, y: 0, size: 30, water: true });
+      for (var j = 0; j < state.units.length; j++) {
+        var u = state.units[j];
+        if (u.side === 'L' || u.dead || u.type === 'air') continue;
+        if (Math.abs(u.x - q.x) < B52_BOMB_RADIUS) damageUnit(state, u, B52_BOMB_DMG, u.x, u.y);
+      }
+      if (Math.abs(state.baseR.x - q.x) < B52_BOMB_RADIUS) damageBase(state, state.baseR, B52_BOMB_DMG * 0.4, q.x, 0);
+    }
   }
 
   // autoFort: enemy base keeps its old fully-automatic fortress gun; the
@@ -760,6 +798,7 @@
     state.gold = Math.min(state.goldCap, state.gold + state.income * dt);
     for (var k in state.buildCd) if (state.buildCd[k] > 0) state.buildCd[k] -= dt;
     if (state.playerGunCool > 0) state.playerGunCool -= dt;
+    stepB52(state, dt);
     stepEnemy(state, dt);
     stepUnits(state, dt);
     stepProjectiles(state, dt);
@@ -773,6 +812,6 @@
     createMatch: createMatch, step: step,
     tryBuild: tryBuild, tryUpgrade: tryUpgrade, upgradeCost: upgradeCost,
     buildCooldown: buildCooldown, unitUnlocked: unitUnlocked, autoPlay: autoPlay,
-    adjustAim: adjustAim, fireBattery: fireBattery
+    adjustAim: adjustAim, fireBattery: fireBattery, fireB52: fireB52, B52_COOLDOWN: B52_COOLDOWN
   };
 });
