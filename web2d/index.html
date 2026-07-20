@@ -183,7 +183,7 @@ window.addEventListener('keydown', function (e) {
   if (k === 'p') paused = !paused;
   if (k === 'f') fast = !fast;
   if (k === 'l') { muted = !muted; }
-  if (k === ' ') { cam.follow = !cam.follow; cam.manualT = 0; e.preventDefault(); }
+  if (k === ' ' || k === 'arrowup' || k === 'arrowdown') e.preventDefault();
   if (k === 'escape') { mode = 'title'; }
   audio();
 });
@@ -582,6 +582,45 @@ function drawAircraft(u, t) {
   }
 }
 
+function drawAimMarker() {
+  if (!st || !st.playerAim || st.baseL.hp <= 0) return;
+  var targetX = st.baseL.x + st.playerAim.range;
+  var x = wx(targetX);
+  if (x < -40 || x > W + 40) return;
+  var firing = !!keys[' '];
+  var y0 = wy(0), topY = y0 - px(50);
+  ctx.strokeStyle = firing ? 'rgba(255,180,80,0.85)' : 'rgba(120,200,255,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x, y0 + 4); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = firing ? '#ffb450' : '#78c8ff';
+  ctx.lineWidth = 2;
+  var r = 7;
+  ctx.beginPath();
+  ctx.moveTo(x, topY - r); ctx.lineTo(x + r, topY);
+  ctx.lineTo(x, topY + r); ctx.lineTo(x - r, topY);
+  ctx.closePath(); ctx.stroke();
+}
+
+function drawBatteryHUD() {
+  if (!st || AUTO || !st.playerAim) return;
+  var a = st.playerAim;
+  var frac = (a.range - a.min) / (a.max - a.min);
+  var bx = 14, by = 48, bw = 220, bh = 20;
+  var firing = !!keys[' '];
+  ctx.fillStyle = 'rgba(6,12,20,0.75)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(bx + 4, by + 13, bw - 8, 5);
+  ctx.fillStyle = firing ? '#ffb450' : '#78c8ff';
+  ctx.fillRect(bx + 4, by + 13, (bw - 8) * frac, 5);
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = firing ? '#ffb450' : '#9fc3e8';
+  ctx.fillText((firing ? '🔥 FIRING' : '⚙ BATTERY') + '  ↑↓ aim · hold SPACE to fire', bx + 4, by + 10);
+}
+
 function drawBase(b, side, t, stage) {
   var x = wx(b.x), s = scale();
   if (x < -300 || x > W + 300) return;
@@ -618,6 +657,18 @@ function drawBase(b, side, t, stage) {
   // flag
   ctx.fillStyle = side === 'L' ? '#5aa2e8' : '#e85a5a';
   ctx.fillRect(10, -104, 12, 6);
+  // player-manned main battery — barrel elevation reflects the aimed range
+  if (side === 'L' && st && st.playerAim) {
+    var aimFrac = (st.playerAim.range - st.playerAim.min) / (st.playerAim.max - st.playerAim.min);
+    var elev = 0.1 + aimFrac * 0.65;
+    ctx.fillStyle = keys[' '] ? '#e8a860' : '#1a2028';
+    ctx.beginPath(); ctx.arc(-3, -102, 7, 0, 7); ctx.fill();
+    ctx.save();
+    ctx.translate(-3, -102);
+    ctx.rotate(-elev);
+    ctx.fillRect(0, -3, 27, 6);
+    ctx.restore();
+  }
   ctx.restore();
   // damage smoke
   var frac = b.hp / b.maxHp;
@@ -770,6 +821,7 @@ function drawHUD(t) {
   drawBaseBar(14, 12, st.baseL, '#5aa2e8', 'HOME BASE');
   drawBaseBar(W - 234, 12, st.baseR, '#e85a5a', 'ENEMY BASE', true);
   if (!AUTO) drawControlButtons();
+  if (!AUTO) drawBatteryHUD();
   // minimap
   var mm = minimapRect();
   ctx.fillStyle = 'rgba(6,12,20,0.75)';
@@ -818,7 +870,7 @@ function drawHUD(t) {
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · space: follow · Esc quit · pause/speed/sound buttons top-right', 14, H - (AUTO ? 12 : 148));
+  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · hold SPACE to fire · Esc quit', 14, H - (AUTO ? 12 : 148));
   if (!AUTO) drawBuildBar(t);
 }
 
@@ -1132,6 +1184,13 @@ function updateCamera(dt) {
   }
 }
 
+function updateAim(dt) {
+  if (!st || st.result) return;
+  var speed = 700;
+  if (keys['arrowup']) S.adjustAim(st, speed * dt);
+  if (keys['arrowdown']) S.adjustAim(st, -speed * dt);
+}
+
 // ---------- main loop
 var lastT = 0, simAcc = 0;
 function frame(ms) {
@@ -1148,6 +1207,7 @@ function frame(ms) {
     var guard = 0;
     while (simAcc >= S.DT && guard < 8) {
       if (AUTO) S.autoPlay(st);
+      else if (keys[' ']) S.fireBattery(st);
       S.step(st);
       consumeEvents();
       simAcc -= S.DT; guard++;
@@ -1163,6 +1223,7 @@ function frame(ms) {
   }
 
   updateCamera(dt);
+  if (!AUTO) updateAim(dt);
   // screen shake
   var shx = 0, shy = 0;
   if (shakeT > 0) {
@@ -1176,6 +1237,7 @@ function frame(ms) {
   drawBackground(t, stageIdx);
   drawBase(st.baseL, 'L', t, stageIdx);
   drawBase(st.baseR, 'R', t, stageIdx);
+  if (!AUTO) drawAimMarker();
   // draw order: subs, ships, aircraft
   var i, u;
   for (i = 0; i < st.units.length; i++) { u = st.units[i]; if (u.type === 'sub') drawUnit(u, t); }

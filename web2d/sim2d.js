@@ -149,24 +149,53 @@
       upgrades: { supply_line: 0, salvage: 0, arsenal: 0, repair: 0, warehouse: 0, fortress: 0 },
       buildCd: {},       // unitId -> remaining s
       queue: [],
-      baseL: { side: 'L', x: 90, hp: BASE_HP, maxHp: BASE_HP, weapons: baseWeapons(1 + Math.floor(stageIdx / 3)), invincible: false },
-      baseR: { side: 'R', x: WORLD - 90, hp: BASE_HP, maxHp: BASE_HP, weapons: baseWeapons(stage.fortress), invincible: false },
+      baseL: { side: 'L', x: 90, hp: BASE_HP, maxHp: BASE_HP, weapons: baseWeapons(1 + Math.floor(stageIdx / 3), false), invincible: false },
+      baseR: { side: 'R', x: WORLD - 90, hp: BASE_HP, maxHp: BASE_HP, weapons: baseWeapons(stage.fortress, true), invincible: false },
       spawnT: stage.spawns.map(function (s) { return s[2]; }),
       randT: stage.random ? stage.random.delay : 0,
       bossSpawned: false, bossId: 0, bossDown: false,
       unlockedStages: opts.unlockedStages || 1,
-      stats: { built: 0, kills: 0, losses: 0 }
+      stats: { built: 0, kills: 0, losses: 0 },
+      // player-manned fortress gun: manual elevation control, no auto-targeting
+      playerAim: { range: 900, min: 150, max: WORLD / 2 - 60 },
+      playerGunCool: 0
     };
     return state;
   }
 
-  function baseWeapons(fortLvl) {
-    var w = [{ key: 'fort', cool: 2 }, { key: 'aa', cool: 1 }, { key: 'aa', cool: 2 }, { key: 'btorp', cool: 3 }];
+  // autoFort: enemy base keeps its old fully-automatic fortress gun; the
+  // player's base gets AA/torpedo point-defense automatically but the main
+  // fortress gun is hand-aimed (see adjustAim/fireBattery below).
+  function baseWeapons(fortLvl, autoFort) {
+    var w = [];
+    if (autoFort) w.push({ key: 'fort', cool: 2 });
+    w.push({ key: 'aa', cool: 1 }, { key: 'aa', cool: 2 }, { key: 'btorp', cool: 3 });
     for (var i = 1; i < fortLvl; i++) {
-      w.push({ key: 'fort', cool: 2 + i });
+      if (autoFort) w.push({ key: 'fort', cool: 2 + i });
       if (i % 2 === 0) w.push({ key: 'btorp', cool: 4 + i });
     }
     return w;
+  }
+
+  function adjustAim(state, delta) {
+    var a = state.playerAim;
+    a.range = Math.max(a.min, Math.min(a.max, a.range + delta));
+  }
+
+  // Called once per sim tick while the player holds the fire input. No-ops
+  // silently if the gun is still cooling down, so callers don't need to
+  // track cooldown themselves.
+  function fireBattery(state) {
+    var b = state.baseL;
+    if (b.hp <= 0 || state.playerGunCool > 0) return;
+    var wdef = WEAPONS.fort;
+    state.playerGunCool = wdef.reload * 0.4; // faster hand-cranked cadence than the AI's fort gun
+    var targetX = b.x + state.playerAim.range;
+    var fortMult = 1 + 0.12 * state.upgrades.fortress;
+    fireWeapon(state, { id: 0, side: 'L', x: b.x, y: -24, type: 'ship', def: { len: 10, detect: wdef.range } },
+      { key: 'fort', cool: 0 }, { x: targetX, y: 0, type: 'ship', dir: 0, speed: 0, id: 0 });
+    var lastP = state.projectiles[state.projectiles.length - 1];
+    if (lastP) lastP.dmg = wdef.dmg * fortMult;
   }
 
   // ---------- queries
@@ -593,6 +622,23 @@
 
   // ---------- auto player (used by ?auto and headless tests)
   function autoPlay(state) {
+    // player-manned fortress gun: track the nearest threat and fire, every
+    // tick, so the scripted auto-player stays a fair proxy for a human
+    // actually working the manual battery (aim/fire keys).
+    var aim = state.playerAim;
+    if (aim && state.baseL.hp > 0) {
+      var nearest = null, nearestD = aim.max;
+      for (var ti = 0; ti < state.units.length; ti++) {
+        var tu = state.units[ti];
+        if (tu.side === 'L' || tu.dead) continue;
+        var td = tu.x - state.baseL.x;
+        if (td >= aim.min * 0.5 && td < nearestD) { nearestD = td; nearest = tu; }
+      }
+      if (nearest) {
+        aim.range = Math.max(aim.min, Math.min(aim.max, nearestD));
+        fireBattery(state);
+      }
+    }
     if (state.t % 0.5 > DT) return;
     var counts = { subs: 0, air: 0, surf: 0, big: 0 };
     var mine = { asw: 0, aa: 0, surf: 0, big: 0 };
@@ -665,6 +711,7 @@
     state.t += dt;
     state.gold = Math.min(state.goldCap, state.gold + state.income * dt);
     for (var k in state.buildCd) if (state.buildCd[k] > 0) state.buildCd[k] -= dt;
+    if (state.playerGunCool > 0) state.playerGunCool -= dt;
     stepEnemy(state, dt);
     stepUnits(state, dt);
     stepProjectiles(state, dt);
@@ -677,6 +724,7 @@
     UNITS: UNITS, WEAPONS: WEAPONS, BOSSES: BOSSES, STAGES: STAGES, UPGRADES: UPGRADES,
     createMatch: createMatch, step: step,
     tryBuild: tryBuild, tryUpgrade: tryUpgrade, upgradeCost: upgradeCost,
-    buildCooldown: buildCooldown, unitUnlocked: unitUnlocked, autoPlay: autoPlay
+    buildCooldown: buildCooldown, unitUnlocked: unitUnlocked, autoPlay: autoPlay,
+    adjustAim: adjustAim, fireBattery: fireBattery
   };
 });
