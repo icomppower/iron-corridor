@@ -139,6 +139,30 @@ var UNIT_KEYS = ['1','2','3','4','5','6','7','8','9','0','q','w','e','r'];
 var UNIT_ORDER = ['patrol_ship','frigate','submarine','fighter','torpedo_bomber','helicopter','destroyer','light_cruiser','heavy_cruiser','hybrid_cruiser','battleship','hybrid_battleship','carrier','atomic_submarine'];
 var UPG_KEYS = ['z','x','c','v','b','n'];
 var UPG_ORDER = ['supply_line','salvage','arsenal','repair','warehouse','fortress'];
+var UNIT_DESC = {
+  patrol_ship: 'Cheap scout — 1x machine gun, fast to spam early',
+  frigate: 'ASW escort — depth charges + 2x MG, hunts submarines',
+  submarine: 'Stealth attacker — torpedo, dives under gunfire',
+  fighter: 'Air superiority — 2x MG, shoots down enemy planes',
+  torpedo_bomber: 'Air strike — torpedo run vs ships, weak armor',
+  helicopter: 'ASW air support — MG + depth charge, hovers near target',
+  destroyer: 'Fast gunship — torpedo, MG, 2x AA, all-rounder',
+  light_cruiser: '4x 152mm guns + AA screen, strong mid-tier line ship',
+  heavy_cruiser: 'Long 203mm guns + missile, longest detection range',
+  hybrid_cruiser: 'Cruiser with a helicopter hangar for ASW cover',
+  battleship: 'Capital ship — 3x 381mm main guns, huge HP',
+  hybrid_battleship: 'Battleship with a torpedo bomber hangar',
+  carrier: 'Launches fighters & bombers automatically, AA-heavy',
+  atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile'
+};
+var UPG_DESC = {
+  supply_line: '+6 gold income per second, per level',
+  salvage: '+8% bonus gold from every enemy kill, per level',
+  arsenal: '-8% build cooldown on all ships, per level',
+  repair: '+4 home base HP regen per second, per level',
+  warehouse: '+600 max gold storage, per level',
+  fortress: '+12% base gun damage per level; extra guns at level 2 & 4'
+};
 
 window.addEventListener('keydown', function (e) {
   var k = e.key.toLowerCase();
@@ -745,6 +769,7 @@ function drawHUD(t) {
   // top bars: base hp
   drawBaseBar(14, 12, st.baseL, '#5aa2e8', 'HOME BASE');
   drawBaseBar(W - 234, 12, st.baseR, '#e85a5a', 'ENEMY BASE', true);
+  if (!AUTO) drawControlButtons();
   // minimap
   var mm = minimapRect();
   ctx.fillStyle = 'rgba(6,12,20,0.75)';
@@ -789,12 +814,43 @@ function drawHUD(t) {
     ctx.font = 'bold 26px monospace';
     ctx.fillText(bossBannerName.indexOf('SUNK') >= 0 ? bossBannerName : '⚠ ENEMY FLAGSHIP ' + bossBannerName.toUpperCase() + ' — 敵旗艦出擊', W / 2, H * 0.3 + 35);
   }
-  if (!AUTO) drawBuildBar(t);
-  // help hint
+  // help hint (drawn before the build bar / tooltips so it never overlaps them)
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · space: follow · P pause · F fast · L sound · Esc quit', 14, H - (AUTO ? 12 : 118));
+  ctx.fillText('drag/wheel: scroll · space: follow · Esc quit · pause/speed/sound buttons top-right', 14, H - (AUTO ? 12 : 148));
+  if (!AUTO) drawBuildBar(t);
+}
+
+function drawControlButtons() {
+  var bw = 84, bh = 24, gap = 4;
+  var bx = W - bw - 14, by = 50;
+  ctlButton(bx, by, bw, bh, paused ? '▶ RESUME' : '⏸ PAUSE', paused, function () { paused = !paused; });
+  ctlButton(bx, by + bh + gap, bw, bh, fast ? '⏩ FAST 2×' : '▶ SPEED 1×', fast, function () { fast = !fast; });
+  ctlButton(bx, by + (bh + gap) * 2, bw, bh, muted ? '🔇 MUTED' : '🔊 SOUND', muted, function () { muted = !muted; });
+}
+function ctlButton(x, y, w, h, label, active, cb) {
+  ctx.fillStyle = active ? 'rgba(90,140,190,0.85)' : 'rgba(16,24,34,0.85)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(120,160,200,0.6)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#e8f2fc';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 4);
+  uiButtons.push({ x: x, y: y, w: w, h: h, cb: cb });
+}
+
+function drawPausedOverlay() {
+  ctx.fillStyle = 'rgba(4,8,14,0.55)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8f2fc';
+  ctx.font = 'bold 40px monospace';
+  ctx.fillText('⏸ PAUSED', W / 2, H / 2 - 10);
+  ctx.font = '13px monospace';
+  ctx.fillStyle = '#9fc3e8';
+  ctx.fillText('tap ▶ RESUME above, or press P', W / 2, H / 2 + 20);
 }
 
 function drawBaseBar(x, y, base, color, label, alignRight) {
@@ -892,21 +948,34 @@ function drawUnitButton(x, y, w, h, id, key, t) {
     ctx.textAlign = 'center';
     ctx.fillText(cd.toFixed(1), x + w / 2, y + h - 6);
   }
-  // hover tooltip
+  // hover tooltip: name + role description + stats/unlock line
   if (mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h) {
-    var tip = def.name + (locked ? ' — clear stage ' + def.unlock + ' to unlock' : '  hp' + def.hp + ' spd' + def.speed);
-    ctx.font = '11px monospace';
-    var tw = ctx.measureText(tip).width + 12;
-    var tx = Math.min(W - tw - 4, Math.max(4, x + w / 2 - tw / 2));
-    ctx.fillStyle = 'rgba(10,18,28,0.95)';
-    ctx.fillRect(tx, y - 22, tw, 18);
-    ctx.fillStyle = '#cfe4f8';
-    ctx.textAlign = 'left';
-    ctx.fillText(tip, tx + 6, y - 9);
+    var line1 = def.name + '  ·  ₲' + def.cost + (locked ? '  🔒 clear stage ' + def.unlock : '  hp' + def.hp + ' spd' + def.speed + ' cd' + def.cd + 's');
+    var line2 = UNIT_DESC[id] || '';
+    drawTooltip(x, y, w, [line1, line2]);
   }
   (function (uid) {
     uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { tryBuildUI(uid); } });
   })(id);
+}
+
+function drawTooltip(x, y, w, lines) {
+  ctx.font = '11px monospace';
+  var tw = 0;
+  for (var i = 0; i < lines.length; i++) tw = Math.max(tw, ctx.measureText(lines[i]).width);
+  tw += 14;
+  var th = lines.length * 15 + 6;
+  var tx = Math.min(W - tw - 4, Math.max(4, x + w / 2 - tw / 2));
+  var ty = y - th - 4;
+  ctx.fillStyle = 'rgba(10,18,28,0.96)';
+  ctx.fillRect(tx, ty, tw, th);
+  ctx.strokeStyle = 'rgba(108,162,216,0.5)';
+  ctx.strokeRect(tx, ty, tw, th);
+  ctx.textAlign = 'left';
+  for (var j = 0; j < lines.length; j++) {
+    ctx.fillStyle = j === 0 ? '#ffd76a' : '#cfe4f8';
+    ctx.fillText(lines[j], tx + 7, ty + 15 + j * 15);
+  }
 }
 
 var UPG_SHORT = { supply_line: 'Supply', salvage: 'Salvage', arsenal: 'Arsenal', repair: 'Repair', warehouse: 'Cargo', fortress: 'Fortress' };
@@ -931,6 +1000,12 @@ function drawUpgradeButton(x, y, w, h, key, hotkey) {
   for (var i = 0; i < def.max; i++) {
     ctx.fillStyle = i < lvl ? '#ffd76a' : 'rgba(255,255,255,0.15)';
     ctx.fillRect(x + w - 6 - i * 7, y + h - 8, 5, 4);
+  }
+  // hover tooltip: full name + effect + level progress
+  if (mouse.x >= x && mouse.x <= x + w && mouse.y >= y && mouse.y <= y + h) {
+    var line1 = def.name + '  ·  Lv ' + lvl + '/' + def.max + (maxed ? '  MAX' : '  ₲' + cost);
+    var line2 = UPG_DESC[key] || '';
+    drawTooltip(x, y, w, [line1, line2]);
   }
   (function (k) {
     uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { tryUpgradeUI(k); } });
@@ -1112,6 +1187,7 @@ function frame(ms) {
 
   if (bossBannerT > 0) bossBannerT -= dt;
   drawHUD(t);
+  if (paused && !AUTO) drawPausedOverlay();
   if (mode === 'victory' || mode === 'defeat') drawEndOverlay(t);
 }
 
