@@ -57,13 +57,16 @@ jobs:
       - name: Import project
         run: /opt/godot/godot --headless --path . --editor --quit
 
-      - name: Export Web build
+      - name: Export Web build (3D, served under /3d/)
         run: |
-          mkdir -p build/web
-          /opt/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          mkdir -p build/web/3d
+          /opt/godot/godot --headless --path . --export-release "Web" build/web/3d/index.html
 
       - name: Add coi-serviceworker shim (SharedArrayBuffer headers)
-        run: cp web_shim/coi-serviceworker.js build/web/coi-serviceworker.js
+        run: cp web_shim/coi-serviceworker.js build/web/3d/coi-serviceworker.js
+
+      - name: Add 2D game at site root
+        run: cp web2d/index.html web2d/sim2d.js build/web/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
