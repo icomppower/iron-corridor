@@ -29,7 +29,7 @@
     atorp: { dmg: 75,  reload: 6.0,  range: 300, proj: 'torpedo', speed: 110, targets: { ship: 1, base: 1 } },
     dc:    { dmg: 24,  reload: 4.0,  range: 250, proj: 'depthcharge', speed: 90, targets: { sub: 1 }, n: 4 },
     msl:   { dmg: 60,  reload: 3.2,  range: 700, proj: 'missile', speed: 210, targets: { ship: 1, air: 1, base: 1 } },
-    fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 430, targets: { ship: 1 }, aoe: 55 },
+    fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 620, targets: { ship: 1 }, aoe: 55 },
     btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } }
   };
 
@@ -195,7 +195,13 @@
     fireWeapon(state, { id: 0, side: 'L', x: b.x, y: -24, type: 'ship', def: { len: 10, detect: wdef.range } },
       { key: 'fort', cool: 0 }, { x: targetX, y: 0, type: 'ship', dir: 0, speed: 0, id: 0 });
     var lastP = state.projectiles[state.projectiles.length - 1];
-    if (lastP) lastP.dmg = wdef.dmg * fortMult;
+    if (lastP) {
+      lastP.dmg = wdef.dmg * fortMult;
+      // the angle solve above assumes equal launch/impact height; force an
+      // exact match so the shell actually lands on the aimed mark instead of
+      // overshooting from the turret's elevated (visual-only) muzzle height
+      lastP.y = 0;
+    }
   }
 
   // ---------- queries
