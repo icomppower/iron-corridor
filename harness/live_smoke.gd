@@ -13,6 +13,10 @@ func _initialize() -> void:
 	print("batch: ", batch["result"], " ticks=", batch["ticks"])
 
 	var live := LiveMatch.new(level, catalog, seed_value)
+	# This AI stand-in spends via Strategies.decide (straight onto live.player),
+	# not the human-facing build()/buy_* commands, so flip the opening gate on
+	# by hand — it acts from tick 0 exactly like the batch sim it's compared to.
+	live.started = true
 	var t := 0
 	while not live.is_over():
 		if t % int(catalog.economy["decision_interval_ticks"]) == 0:

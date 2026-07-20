@@ -28,6 +28,18 @@ var enemy_strategy_id: String = "level_ai"
 var _flagship_aim_bonus: float = 0.0
 var _enemy_income: float = 0.0
 
+## Interactive-only opening gate. The headless balance harness (MatchSim.run)
+## drives BOTH sides with AIs that spend from tick 0, so they ramp up
+## symmetrically. A human can't act on tick 0 — they need a few seconds to read
+## the board and tap — so the enemy's scripted opening would melt the still-empty
+## base in ~6s: you lose before you can do anything. So the match stays frozen
+## (no ticks, no enemy build-up, no combat) until the player's first spend, then
+## runs normally. Because nothing advances pre-input, the human and the enemy
+## both effectively begin at tick 0 — the same symmetric start the harness sees.
+## MatchSim.run never touches LiveMatch, so the converged balance / CI oracle is
+## unaffected.
+var started: bool = false
+
 func _init(p_level: Dictionary, p_catalog: Catalog, seed_value: int, unlocked_skills: Array = []) -> void:
 	level = p_level
 	catalog = p_catalog
@@ -48,7 +60,7 @@ func is_over() -> bool:
 	return result != ""
 
 func step() -> void:
-	if is_over():
+	if is_over() or not started:
 		return
 	if tick >= turn_budget:
 		result = "LOSS"
@@ -115,13 +127,22 @@ func step() -> void:
 ## ---------------------------------------------------------- player commands
 
 func build(unit_id: String) -> bool:
-	return MatchSim.enqueue_build(player, catalog, unit_id, economy, tick)
+	var ok := MatchSim.enqueue_build(player, catalog, unit_id, economy, tick)
+	if ok:
+		started = true
+	return ok
 
 func buy_income() -> bool:
-	return MatchSim.buy_income_upgrade(player, economy)
+	var ok := MatchSim.buy_income_upgrade(player, economy)
+	if ok:
+		started = true
+	return ok
 
 func buy_installment() -> bool:
-	return MatchSim.buy_installment_upgrade(player, economy)
+	var ok := MatchSim.buy_installment_upgrade(player, economy)
+	if ok:
+		started = true
+	return ok
 
 func recycle(unit_id: String) -> float:
 	return MatchSim.recycle_stack(player, catalog, unit_id, economy)

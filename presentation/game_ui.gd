@@ -20,6 +20,7 @@ var _build_bar: HBoxContainer
 var _fire_button: Button
 var _result_panel: PanelContainer
 var _result_label: Label
+var _start_hint: Label
 var _skills_button: Button
 var _skills_panel: PanelContainer
 var _skills_list: VBoxContainer
@@ -82,6 +83,19 @@ func _ready() -> void:
 	vb.add_child(restart_btn)
 	_result_panel.add_child(vb)
 	root.add_child(_result_panel)
+
+	# Shown until the player's first build/upgrade. The match is frozen until
+	# then (see LiveMatch), so this tells the player to tap in rather than
+	# leaving them staring at a still board thinking it's stuck.
+	_start_hint = Label.new()
+	_start_hint.text = "Tap a ship below to deploy and begin the battle"
+	_start_hint.add_theme_font_size_override("font_size", 22)
+	_start_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_start_hint.set_anchors_preset(Control.PRESET_CENTER)
+	_start_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_start_hint.position = Vector2(-260, 40)
+	_start_hint.custom_minimum_size = Vector2(520, 0)
+	root.add_child(_start_hint)
 
 	_skills_button = Button.new()
 	_skills_button.text = "Skills"
@@ -165,6 +179,7 @@ func sync(live: LiveMatch) -> void:
 	_weather_label.text = "  Weather: %s" % live.weather_id
 	_era_label.text = "  Era: %s" % live.era_name()
 	_fire_button.visible = live.phase == MatchSim.PHASE_BOSS
+	_start_hint.visible = not live.started and not live.is_over()
 
 	if live.is_over():
 		_result_panel.visible = true
