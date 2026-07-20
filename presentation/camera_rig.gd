@@ -9,6 +9,9 @@ extends Node3D
 @export var zoom_min := 8.0
 @export var zoom_max := 45.0
 @export var pan_speed := 0.05
+## Player base sits at negative X; start the view biased to that side so the
+## opening frames your own fleet with the enemy pushing in from the right.
+@export var start_x := -8.0
 
 var _camera: Camera3D
 var _distance := 19.0
@@ -21,6 +24,7 @@ func _ready() -> void:
 	_camera = Camera3D.new()
 	_camera.position = Vector3(0, 0, 0)
 	add_child(_camera)
+	position.x = start_x
 	_apply_distance()
 
 func _apply_distance() -> void:
