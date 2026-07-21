@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.007';
+var GAME_VERSION = 'v1.008';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -421,7 +421,7 @@ function drawBackground(t, stage) {
 function drawRangeRuler() {
   if (!st) return;
   var y0 = seaY();
-  var minor = 200, major = 1000;
+  var minor = 100, major = 1000;
   var viewW = W / scale();
   var startX = Math.floor(cam.x / minor) * minor;
   var endX = cam.x + viewW + minor;
