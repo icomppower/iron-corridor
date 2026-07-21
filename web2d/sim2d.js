@@ -391,7 +391,12 @@
         } else {
           p.x += p.vx * dt;
           var ty = p.ty || 0;
-          p.y += Math.max(-14 * dt, Math.min(14 * dt, ty - p.y));
+          // rise/dive rate must clear a sub's full depth well within normal
+          // engagement range - at the old 14/s, a torpedo fired from the
+          // atomic submarine's depth (78) took ~4.4s to surface, during
+          // which its 100/s horizontal speed carried it 436 units past any
+          // target at typical engagement distance before it could ever hit
+          p.y += Math.max(-60 * dt, Math.min(60 * dt, ty - p.y));
           var h = hitScanTorpedo(state, p);
           if (h) { ps.splice(i, 1); continue; }
           state.tw = 0;
