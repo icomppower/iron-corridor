@@ -372,6 +372,12 @@ function protoFor(unitKey, def, side, boss) {
   var L = def.len, hl = L / 2;
   var type = boss ? 'ship' : def.type;
 
+  if (unitKey === 'godzilla') {
+    buildGodzilla(g, M, L, hl);
+    protoCache[key] = g;
+    return g;
+  }
+
   if (type === 'ship') {
     var beam = Math.max(7, L * 0.13), hgt = Math.max(5, L * 0.1);
     g.userData.lift = hgt * 0.32; // waterline sits below the deck, not mid-hull
@@ -489,6 +495,43 @@ function addSuper(g, unitKey, def, M, L, beam, hgt, boss) {
   }
 }
 
+// stage 11 capstone boss - a kaiju wading the lane, not a ship. Built from
+// scratch (no hullGeo/turret reuse) so it reads as a monster: legs planted
+// at the waterline, a hunched torso and head rearing up well past the
+// generic boss silhouette's height, a sweeping tail. hl is half of
+// BOSSES.godzilla.len (260, vs Enterprise's 170) so it scales with any
+// future stat tweak. No userData.lift is set (unlike the ship path) - the
+// group origin stays at the waterline, matching where the legs meet it.
+function buildGodzilla(g, M, L, hl) {
+  var glow = mat('godzillaEye', { color: 0x2e2126, emissive: 0xff5040, emissiveIntensity: 2 });
+  // legs, straddling the waterline
+  g.add(box(hl * 0.22, hl * 0.5, hl * 0.24, M.hull, -hl * 0.20, hl * 0.16, hl * 0.10));
+  g.add(box(hl * 0.22, hl * 0.5, hl * 0.24, M.hull, hl * 0.14, hl * 0.16, -hl * 0.10));
+  // tail sweeping back
+  var tail = cyl(hl * 0.02, hl * 0.16, hl * 0.85, M.hull, -hl * 0.75, hl * 0.30, 0, Math.PI / 2);
+  tail.rotation.z = -0.35;
+  g.add(tail);
+  // torso, hunched and rising
+  var torso = new THREE.Mesh(new THREE.SphereGeometry(hl * 0.34, 10, 8), M.hull);
+  torso.position.set(-hl * 0.02, hl * 0.62, 0);
+  torso.scale.set(1.3, 1.7, 1.05);
+  g.add(torso);
+  // arms
+  g.add(box(hl * 0.10, hl * 0.32, hl * 0.10, M.hull, hl * 0.24, hl * 0.5, hl * 0.22));
+  g.add(box(hl * 0.10, hl * 0.32, hl * 0.10, M.hull, hl * 0.24, hl * 0.5, -hl * 0.22));
+  // dorsal spikes down the back
+  for (var i = 0; i < 6; i++) {
+    var s = cyl(0.1, hl * 0.05, hl * (0.14 + 0.03 * (i % 3)), M.upper, -hl * 0.28 + i * hl * 0.11, hl * (0.95 + i * 0.01), 0);
+    s.rotation.x = -0.25;
+    g.add(s);
+  }
+  // head + glowing eyes, thrust forward
+  var head = box(hl * 0.22, hl * 0.20, hl * 0.24, M.hull, hl * 0.36, hl * 1.02, 0);
+  g.add(head);
+  var eyeL = new THREE.Mesh(new THREE.SphereGeometry(hl * 0.025, 6, 6), glow); eyeL.position.set(hl * 0.46, hl * 1.04, hl * 0.07); g.add(eyeL);
+  var eyeR = new THREE.Mesh(new THREE.SphereGeometry(hl * 0.025, 6, 6), glow); eyeR.position.set(hl * 0.46, hl * 1.04, -hl * 0.07); g.add(eyeR);
+}
+
 function buildAircraft(g, unitKey, def, M) {
   if (unitKey === 'helicopter') {
     var body = new THREE.Mesh(new THREE.SphereGeometry(6, 10, 8), M.hull);
@@ -498,19 +541,28 @@ function buildAircraft(g, unitKey, def, M) {
     var rotor = box(30, 0.5, 1.6, mat('rotor', { color: 0xdce6f0, transparent: true, opacity: 0.55 }), 0, 7, 0);
     rotor.name = 'rotor'; g.add(rotor);
     g.add(cyl(0.5, 0.5, 3.5, M.upper, 0, 5, 0));
-  } else if (unitKey === 'long_range_bomber' || unitKey === 'b52') {
-    var big = unitKey === 'b52' ? 1.9 : 1;
-    var fus = cyl(2.2 * big, 2.2 * big, 30 * big, M.hull, 0, 0, 0, Math.PI / 2);
+  } else if (unitKey === 'b52') {
+    var fus = cyl(2.2 * 1.9, 2.2 * 1.9, 30 * 1.9, M.hull, 0, 0, 0, Math.PI / 2);
     g.add(fus);
-    var nose = new THREE.Mesh(new THREE.SphereGeometry(2.2 * big, 8, 6), M.hull); nose.position.x = 15 * big; g.add(nose);
-    var wing = box(7 * big, 0.8, 42 * big, M.upper, 1 * big, 1, 0);
+    var nose = new THREE.Mesh(new THREE.SphereGeometry(2.2 * 1.9, 8, 6), M.hull); nose.position.x = 15 * 1.9; g.add(nose);
+    var wing = box(7 * 1.9, 0.8, 42 * 1.9, M.upper, 1 * 1.9, 1, 0);
     wing.rotation.y = 0.22; g.add(wing);
     for (var e = 0; e < 2; e++) {
-      g.add(cyl(1 * big, 1 * big, 4 * big, darkMat, -1, -0.8, (e ? 1 : -1) * 9 * big, Math.PI / 2));
-      g.add(cyl(1 * big, 1 * big, 4 * big, darkMat, -3, -0.8, (e ? 1 : -1) * 16 * big, Math.PI / 2));
+      g.add(cyl(1 * 1.9, 1 * 1.9, 4 * 1.9, darkMat, -1, -0.8, (e ? 1 : -1) * 9 * 1.9, Math.PI / 2));
+      g.add(cyl(1 * 1.9, 1 * 1.9, 4 * 1.9, darkMat, -3, -0.8, (e ? 1 : -1) * 16 * 1.9, Math.PI / 2));
     }
-    g.add(box(1, 6 * big, 1.4, M.upper, -14 * big, 3 * big, 0));
-    g.add(box(1, 0.8, 12 * big, M.upper, -14 * big, 5.5 * big, 0));
+    g.add(box(1, 6 * 1.9, 1.4, M.upper, -14 * 1.9, 3 * 1.9, 0));
+    g.add(box(1, 0.8, 12 * 1.9, M.upper, -14 * 1.9, 5.5 * 1.9, 0));
+  } else if (unitKey === 'long_range_bomber') {
+    // recon balloon redesign (matches web2d's drawAircraft): round envelope
+    // + tail fins + a slung gondola, distinct from every fixed-wing class
+    var env = new THREE.Mesh(new THREE.SphereGeometry(11, 12, 9), M.hull);
+    env.scale.set(1.5, 1, 1); g.add(env);
+    var finTop = box(0.8, 5, 6, M.upper, -13, 2, 0); finTop.rotation.z = -0.5; g.add(finTop);
+    var finBot = box(0.8, 5, 6, M.upper, -13, -2, 0); finBot.rotation.z = 0.5; g.add(finBot);
+    var gondola = box(12, 3, 4, darkMat, 0, -9, 0); g.add(gondola);
+    g.add(box(3, 2, 2, darkMat, -5, -9, 3.5));  // missile pod, port
+    g.add(box(3, 2, 2, darkMat, -5, -9, -3.5)); // missile pod, starboard
   } else { // fighter / torpedo_bomber
     var tb = unitKey === 'torpedo_bomber';
     var s = tb ? 1.2 : 1;

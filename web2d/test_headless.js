@@ -97,5 +97,13 @@ if (S.STAGES.length > 9) {
     'result=' + r10.result + ' t=' + Math.round(r10.t) + ' eHp=' + Math.round(r10.eHp) + ' pHp=' + Math.round(r10.pHp));
 }
 
+// Stage 11 - Godzilla, one stage past Enterprise, same "not meant to be
+// winnable by the auto-player" precedent as stage 10.
+if (S.STAGES.length > 10) {
+  var r11 = run(10, { auto: true, seed: 7 });
+  check('stage 11 (godzilla) runs >200s without early collapse', r11.t > 200,
+    'result=' + r11.result + ' t=' + Math.round(r11.t) + ' eHp=' + Math.round(r11.eHp) + ' pHp=' + Math.round(r11.pHp));
+}
+
 console.log(fails.length ? '\n' + fails.length + ' FAILURES' : '\nALL GREEN');
 process.exit(fails.length ? 1 : 0);

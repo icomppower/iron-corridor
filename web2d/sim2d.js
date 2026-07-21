@@ -32,7 +32,12 @@
     msl:   { dmg: 60,  reload: 3.2,  range: 700, proj: 'missile', speed: 210, targets: { ship: 1, air: 1, base: 1 } },
     fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 620, targets: { ship: 1 }, aoe: 55 },
     btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } },
-    lrm:   { dmg: 140, reload: 5.5,  range: 1000, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 }, aoe: 70 }
+    lrm:   { dmg: 140, reload: 5.5,  range: 1000, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 }, aoe: 70 },
+    // stage 11 boss weapons - thermal breath (long, arcing "shell" tracer
+    // reads fine as a heat ray) and a short-range claw/tail smash for when
+    // it closes to melee. See BOSSES.godzilla.
+    atombreath: { dmg: 230, reload: 4.0, range: 760, proj: 'shell', speed: 460, targets: { ship: 1, base: 1 } },
+    kaijuclaw:  { dmg: 300, reload: 2.0, range: 170, proj: 'shell', speed: 900, targets: { ship: 1 } }
   };
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
@@ -61,7 +66,11 @@
     // real trace: an mg-armed fighter killed one in ~10s of unanswered
     // fire. Tail gun (mg, same weapon frigates/destroyers carry) gives it
     // a fighting chance up close without changing its long-range behavior.
-    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 220, speed: 90, cost: 950, cd: 22, detect: 1050, minDist: 900, len: 34, alt: -210, weapons: ['lrm', 'mg', 'mg'], unlock: 4 }
+    // Redesigned into a stand-off recon balloon (visual only - drawAircraft
+    // in index.html): dual lrm racks (same "fire multiple long-range
+    // missiles" doctrine as atomic_submarine's triple msl battery) and hp
+    // roughly doubled so it survives long stage 11/Godzilla engagements.
+    long_range_bomber: { name: 'Long-Range Balloon', type: 'air', hp: 480, speed: 90, cost: 950, cd: 22, detect: 1050, minDist: 900, len: 34, alt: -210, weapons: ['lrm', 'lrm', 'mg', 'mg'], unlock: 4 }
   };
 
   var BOSSES = {
@@ -82,7 +91,16 @@
     // now make it a genuine threat directly, not just via its hangar.
     // minDist dropped to match (900 kept it outside even its own guns'
     // range, since the strongest gun here only reaches 780).
-    uss_enterprise: { name: 'USS Enterprise', hp: 300000, speed: 20, minDist: 400, len: 170, weapons: ['g460', 'g460', 'g460', 'g406', 'g406', 'aa', 'aa', 'aa', 'aa', 'mg', 'mg'], hangar: 6, hangarUnit: 'mixed' }
+    uss_enterprise: { name: 'USS Enterprise', hp: 300000, speed: 20, minDist: 400, len: 170, weapons: ['g460', 'g460', 'g460', 'g406', 'g406', 'aa', 'aa', 'aa', 'aa', 'mg', 'mg'], hangar: 6, hangarUnit: 'mixed' },
+    // true final capstone, one stage past Enterprise - a kaiju, not a ship.
+    // len 260 (vs Enterprise's 170) reads clearly bigger than the player's
+    // own base silhouette (~195 wide / ~105 tall, see drawBase) once
+    // rendered via the custom drawGodzilla() shape in index.html instead of
+    // the shared naval-hull silhouette every other boss uses. minDist is
+    // deliberately low (closes to near-melee, unlike the stand-off carrier
+    // bosses) so it reads as a monster wading in to smash the base rather
+    // than another gunline ship. No hangar - it fights with its own body.
+    godzilla: { name: 'GODZILLA', hp: 480000, speed: 24, minDist: 260, len: 260, weapons: ['atombreath', 'atombreath', 'kaijuclaw', 'aa', 'aa'] }
   };
 
   // ---- 9 stages: enemy spawn timers (seconds); pool for random extra pressure
@@ -112,7 +130,14 @@
       { interval: 12, jitter: 5, delay: 120, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship'] }, 3),
     stg('Stage 10 — Enterprise Group', 'uss_enterprise',
       [['patrol_ship', 5, 8], ['frigate', 6, 10], ['submarine', 8, 18], ['helicopter', 11, 30], ['torpedo_bomber', 9, 35], ['fighter', 7, 20], ['destroyer', 13, 45], ['light_cruiser', 20, 65], ['heavy_cruiser', 25, 100], ['battleship', 40, 150], ['carrier', 70, 220]],
-      { interval: 10, jitter: 5, delay: 100, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship', 'carrier'] }, 4)
+      { interval: 10, jitter: 5, delay: 100, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship', 'carrier'] }, 4),
+    // one stage past Enterprise - Godzilla. Same "not meant to be winnable
+    // by the scripted auto-player" precedent as stage 10 (see
+    // test_headless.js); only required to run cleanly without an early
+    // player-base collapse.
+    stg('Stage 11 — Kaiju Rising', 'godzilla',
+      [['patrol_ship', 4.5, 8], ['frigate', 5.5, 10], ['submarine', 7, 18], ['helicopter', 10, 30], ['torpedo_bomber', 8, 35], ['fighter', 6, 20], ['destroyer', 12, 45], ['light_cruiser', 18, 65], ['heavy_cruiser', 22, 100], ['battleship', 36, 150], ['carrier', 62, 220]],
+      { interval: 9, jitter: 5, delay: 90, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship', 'carrier'] }, 5)
   ];
 
   // ---- upgrades (player): [baseCost, growth, maxLvl]

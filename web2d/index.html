@@ -11,11 +11,11 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<script src="sim2d.js?v=1.014"></script>
+<script src="sim2d.js?v=1.015"></script>
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.014';
+var GAME_VERSION = 'v1.015';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -178,7 +178,7 @@ var UNIT_DESC = {
   hybrid_battleship: 'Battleship with a torpedo bomber hangar',
   carrier: 'Launches fighters & bombers automatically, AA-heavy',
   atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile',
-  long_range_bomber: 'Holds far outside ship/base fire, long-range missile + tail guns vs fighters'
+  long_range_bomber: 'Recon balloon — holds far outside ship/base fire, dual long-range missiles + tail guns vs fighters'
 };
 var UPG_DESC = {
   supply_line: '+16 gold income per second, per level',
@@ -519,9 +519,14 @@ function drawUnit(u, t) {
   ctx.restore();
   ctx.globalAlpha = 1;
   // hp bar
+  // godzilla rears up far above the naval-hull silhouette every other boss
+  // shares (drawGodzilla reaches ~1x its own half-length above the
+  // waterline) - the shared boss offsets below would sit the bar/tag inside
+  // its body, so give it a taller clearance keyed to its own length instead
+  var tall = u.unit === 'godzilla' ? u.def.len * 1.08 : 0;
   if (u.hp < u.maxHp) {
     var bw = Math.max(26, px(u.def.len) * 0.7);
-    var bx = x - bw / 2, by = y - px(u.type === 'air' ? 22 : (u.boss ? 44 : 26));
+    var bx = x - bw / 2, by = y - px(tall || (u.type === 'air' ? 22 : (u.boss ? 44 : 26)));
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(bx, by, bw, 4);
     var frac = Math.max(0, u.hp / u.maxHp);
     ctx.fillStyle = frac > 0.5 ? '#7fd67f' : frac > 0.25 ? '#e8c85a' : '#e86a5a';
@@ -532,7 +537,7 @@ function drawUnit(u, t) {
     ctx.fillStyle = 'rgba(255,90,70,0.9)';
     ctx.font = 'bold ' + Math.round(12) + 'px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(u.def.name.toUpperCase(), x, y - px(52));
+    ctx.fillText(u.def.name.toUpperCase(), x, y - px(tall ? tall + 10 : 52));
   }
   // wake foam
   if (u.type === 'ship') {
@@ -546,6 +551,7 @@ function drawUnit(u, t) {
 }
 
 function drawShipHull(u, t) {
+  if (u.unit === 'godzilla') { drawGodzilla(u, t); return; }
   var L = u.def.len, hl = L / 2;
   var big = L >= 100;
   // hull
@@ -645,6 +651,61 @@ function drawBossSuper(u) {
     turret(hl * 0.3, -20, 8);
   }
 }
+// stage 11 capstone boss - a kaiju wading through the lane, not a ship.
+// Drawn from scratch (no hull/turret reuse) so it reads unmistakably bigger
+// and different from every naval silhouette, including Enterprise. hl is
+// half the boss's def.len (260, vs Enterprise's 170) so the whole rig scales
+// with any future stat tweak without touching this function.
+function drawGodzilla(u, t) {
+  var L = u.def.len, hl = L / 2;
+  var body = hullColor(u), dark = upperColor(u);
+  var stomp = Math.sin(t * 1.3 + u.id) * hl * 0.015;
+  // legs, wading at the waterline
+  ctx.fillStyle = dark;
+  ctx.fillRect(-hl * 0.30, -hl * 0.10 + stomp, hl * 0.20, hl * 0.46);
+  ctx.fillRect(hl * 0.04, -hl * 0.10 - stomp, hl * 0.20, hl * 0.46);
+  // tail, sweeping back behind the body
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-hl * 0.28, -hl * 0.52);
+  ctx.quadraticCurveTo(-hl * 0.85, -hl * 0.38, -hl * 1.04, -hl * 0.06);
+  ctx.lineTo(-hl * 0.94, -hl * 0.02);
+  ctx.quadraticCurveTo(-hl * 0.7, -hl * 0.30, -hl * 0.30, -hl * 0.34);
+  ctx.closePath(); ctx.fill();
+  // hunched torso rearing up
+  ctx.beginPath();
+  ctx.moveTo(-hl * 0.40, -hl * 0.08);
+  ctx.quadraticCurveTo(-hl * 0.50, -hl * 0.78, -hl * 0.08, -hl * 0.95);
+  ctx.quadraticCurveTo(hl * 0.32, -hl * 1.00, hl * 0.36, -hl * 0.55);
+  ctx.quadraticCurveTo(hl * 0.38, -hl * 0.16, hl * 0.20, -hl * 0.02);
+  ctx.closePath(); ctx.fill();
+  // arms
+  ctx.fillRect(hl * 0.14, -hl * 0.52, hl * 0.14, hl * 0.32);
+  ctx.fillRect(-hl * 0.48, -hl * 0.56, hl * 0.12, hl * 0.28);
+  // dorsal spikes along the back
+  ctx.fillStyle = dark;
+  for (var i = 0; i < 5; i++) {
+    var sx = -hl * 0.30 + i * hl * 0.14;
+    var sh = hl * (0.14 + 0.04 * (i % 3));
+    var sy = -hl * 0.58 - i * hl * 0.03;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + hl * 0.045, sy - sh);
+    ctx.lineTo(sx + hl * 0.09, sy);
+    ctx.closePath(); ctx.fill();
+  }
+  // head + jaw, thrust forward
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(hl * 0.18, -hl * 0.92);
+  ctx.lineTo(hl * 0.52, -hl * 1.00);
+  ctx.lineTo(hl * 0.58, -hl * 0.84);
+  ctx.lineTo(hl * 0.30, -hl * 0.72);
+  ctx.closePath(); ctx.fill();
+  // glowing eye
+  ctx.fillStyle = '#ff5040';
+  ctx.fillRect(hl * 0.46, -hl * 0.94, hl * 0.045, hl * 0.035);
+}
 function gun(x, y, l) { ctx.fillRect(x, y, l, 2.5); }
 function turret(x, y, l) {
   ctx.fillRect(x - 6, y, 10, 5);
@@ -658,6 +719,26 @@ function funnel(x, y) { ctx.fillRect(x, y - 6, 6, 8); }
 
 function drawAircraft(u, t) {
   ctx.fillStyle = hullColor(u);
+  if (u.unit === 'long_range_bomber') {
+    // recon balloon: round envelope reads as a distinct "blip" silhouette
+    // at long range instead of a fixed-wing shape, unmistakable from every
+    // other aircraft class even at the small on-screen sizes this game uses
+    ctx.beginPath();
+    ctx.ellipse(-1, -3, 16, 11, 0, 0, 7); ctx.fill();
+    // tail fins on the envelope
+    ctx.fillStyle = upperColor(u);
+    ctx.beginPath();
+    ctx.moveTo(-17, -8); ctx.lineTo(-24, -12); ctx.lineTo(-22, -4); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-17, 2); ctx.lineTo(-24, 6); ctx.lineTo(-22, -2); ctx.closePath(); ctx.fill();
+    // suspension lines + slung gondola carrying the twin lrm racks
+    ctx.strokeStyle = 'rgba(20,24,30,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-6, 5); ctx.lineTo(-4, 11); ctx.moveTo(6, 5); ctx.lineTo(4, 11); ctx.stroke();
+    ctx.fillStyle = '#20262e';
+    ctx.fillRect(-8, 11, 14, 5);
+    ctx.fillRect(-11, 12, 4, 3); ctx.fillRect(7, 12, 4, 3); // missile pods either side
+    return;
+  }
   if (u.unit === 'helicopter') {
     // body
     ctx.beginPath();
@@ -688,14 +769,6 @@ function drawAircraft(u, t) {
     if (u.unit === 'torpedo_bomber') {
       ctx.fillStyle = '#20262e';
       ctx.fillRect(-6, 4, 14, 3);
-    }
-    if (u.unit === 'long_range_bomber') {
-      // bigger, twin-tail heavy silhouette so it reads as a different class
-      ctx.fillStyle = hullColor(u);
-      ctx.fillRect(-19, -8, 8, 5);
-      ctx.fillRect(-19, 4, 8, 5);
-      ctx.fillStyle = upperColor(u);
-      ctx.fillRect(-3, -1.5, 20, 3);
     }
   }
 }

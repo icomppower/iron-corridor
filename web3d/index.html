@@ -13,19 +13,19 @@
 <body>
 <canvas id="gl"></canvas>
 <canvas id="c"></canvas>
-<script src="sim2d.js?v=1.001-3d"></script>
+<script src="sim2d.js?v=1.002-3d"></script>
 <script>
   // deployed: sim2d.js is copied next to this file; local dev: fall back to the 2D folder
-  if (typeof Sim2D === 'undefined') document.write('<script src="../web2d/sim2d.js?v=1.001-3d"><\/script>');
+  if (typeof Sim2D === 'undefined') document.write('<script src="../web2d/sim2d.js?v=1.002-3d"><\/script>');
 </script>
 <script type="module">
 'use strict';
 /* Iron Corridor 3D — shell/UI/audio. Sim logic is the untouched sim2d.js;
  * world rendering lives in render3d.js (Three.js). The HUD is drawn on a
  * transparent 2D canvas overlaid on the WebGL canvas. */
-import * as R3 from './render3d.js?v=1.001-3d';
+import * as R3 from './render3d.js?v=1.002-3d';
 
-var GAME_VERSION = 'v1.001-3d';
+var GAME_VERSION = 'v1.002-3d';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var glCanvas = document.getElementById('gl');
