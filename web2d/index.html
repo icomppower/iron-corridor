@@ -11,11 +11,11 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<script src="sim2d.js?v=1.013"></script>
+<script src="sim2d.js?v=1.014"></script>
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.013';
+var GAME_VERSION = 'v1.014';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -178,7 +178,7 @@ var UNIT_DESC = {
   hybrid_battleship: 'Battleship with a torpedo bomber hangar',
   carrier: 'Launches fighters & bombers automatically, AA-heavy',
   atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile',
-  long_range_bomber: 'Holds far outside all enemy fire, fires long-range missile'
+  long_range_bomber: 'Holds far outside ship/base fire, long-range missile + tail guns vs fighters'
 };
 var UPG_DESC = {
   supply_line: '+16 gold income per second, per level',

@@ -55,7 +55,13 @@
     // 780, the yamato boss's g460) - so it never takes fire in exchange for
     // a slow, single long-range missile. Player-only: never appears in any
     // stage's spawn list, same pattern as the other unlock-gated units.
-    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 150, speed: 90, cost: 950, cd: 22, detect: 1050, minDist: 900, len: 34, alt: -210, weapons: ['lrm'], unlock: 4 }
+    // lrm keeps it safe from every ship/base weapon in the game, but with
+    // only that one weapon (targets ship+base, not air) it had zero way to
+    // fight back against enemy fighters closing to point-blank range -
+    // real trace: an mg-armed fighter killed one in ~10s of unanswered
+    // fire. Tail gun (mg, same weapon frigates/destroyers carry) gives it
+    // a fighting chance up close without changing its long-range behavior.
+    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 220, speed: 90, cost: 950, cd: 22, detect: 1050, minDist: 900, len: 34, alt: -210, weapons: ['lrm', 'mg', 'mg'], unlock: 4 }
   };
 
   var BOSSES = {
@@ -70,7 +76,13 @@
     yamato:      { name: 'Yamato',      hp: 10000, speed: 18,   minDist: 400,  len: 156, weapons: ['g460', 'g460', 'g460', 'g152', 'g152', 'aa', 'aa', 'aa'] },
     // true endgame capstone - 30x Yamato's hp, a supercarrier that hangs
     // back like Midway and keeps launching escort aircraft the whole fight
-    uss_enterprise: { name: 'USS Enterprise', hp: 300000, speed: 20, minDist: 900, len: 170, weapons: ['aa', 'aa', 'aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 6, hangarUnit: 'mixed' }
+    // was copied from Midway's pure-carrier loadout (aa only hits air) -
+    // gave it almost no real anti-ship firepower, so it would close in and
+    // just sit there ("charge without destroy anything"). Real naval guns
+    // now make it a genuine threat directly, not just via its hangar.
+    // minDist dropped to match (900 kept it outside even its own guns'
+    // range, since the strongest gun here only reaches 780).
+    uss_enterprise: { name: 'USS Enterprise', hp: 300000, speed: 20, minDist: 400, len: 170, weapons: ['g460', 'g460', 'g460', 'g406', 'g406', 'aa', 'aa', 'aa', 'aa', 'mg', 'mg'], hangar: 6, hangarUnit: 'mixed' }
   };
 
   // ---- 9 stages: enemy spawn timers (seconds); pool for random extra pressure
