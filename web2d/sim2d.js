@@ -32,7 +32,7 @@
     msl:   { dmg: 60,  reload: 3.2,  range: 700, proj: 'missile', speed: 210, targets: { ship: 1, air: 1, base: 1 } },
     fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 620, targets: { ship: 1 }, aoe: 55 },
     btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } },
-    lrm:   { dmg: 140, reload: 5.5,  range: 1000, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 } }
+    lrm:   { dmg: 140, reload: 5.5,  range: 1000, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 }, aoe: 70 }
   };
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
@@ -187,12 +187,27 @@
       playerGunCool: 0,
       // B-52 carpet-bombing strike: player-triggered, long cooldown, sweeps
       // the whole map from the player's base to the enemy's
-      b52Cool: 0, b52Queue: []
+      b52Cool: 0, b52Queue: [],
+      // "all forward" push: player-triggered, temporarily overrides the
+      // combat-hold that normally freezes a ship/sub once it's engaged, so
+      // a fleet that's been sitting in a stalled front-line trench (each
+      // unit re-engaging a fresh reinforcement at the same standoff
+      // distance forever) can be manually ordered to push through it
+      allForwardT: 0, allForwardCool: 0
     };
     return state;
   }
 
   var B52_COOLDOWN = 120;
+  var ALLFORWARD_COOLDOWN = 60;
+  var ALLFORWARD_DURATION = 14;
+
+  function triggerAllForward(state) {
+    if (state.allForwardCool > 0) return false;
+    state.allForwardT = ALLFORWARD_DURATION;
+    state.allForwardCool = ALLFORWARD_COOLDOWN;
+    return true;
+  }
   var B52_BOMB_DMG = 900; // ~50% of a carrier's 1800 hp per direct hit
   var B52_BOMB_RADIUS = 85;
 
@@ -319,6 +334,13 @@
       if (u.type === 'air') { p.dropY = u.y; p.y = u.y; p.dropping = true; }
     } else if (wdef.proj === 'missile') {
       p.vx = Math.sign(dx) * wdef.speed * 0.4; p.vy = -120; p.homing = true; p.speed = wdef.speed;
+      // a missile launched from a submerged sub starts at full depth
+      // (e.g. 78), already past the "reached the surface, resolve hit or
+      // miss" threshold (p.y>=4) the very first tick - it would fizzle at
+      // the launch point before ever traveling toward the target. Give it
+      // a dedicated rise phase (same pattern as the air-dropped torpedo)
+      // so it actually surfaces before normal homing/hit-resolution begins.
+      if (u.type === 'sub') { p.subRise = true; }
     } else if (wdef.proj === 'depthcharge') {
       var n = wdef.n || 1;
       for (var i = 0; i < n; i++) {
@@ -385,8 +407,8 @@
         if (p.kind === 'shell') {
           var hit = hitScanSurface(state, p);
           if (hit || p.y >= 0) {
-            if (hit) explode(state, p);
-            else state.events.push({ type: 'splash', x: p.x, y: 0, size: p.dmg > 90 ? 16 : 9 });
+            if (hit === 'unit') explode(state, p);
+            else if (!hit) state.events.push({ type: 'splash', x: p.x, y: 0, size: p.dmg > 90 ? 16 : 9 });
             if (!hit && p.aoe) explodeAt(state, p, p.x, 0);
             ps.splice(i, 1); continue;
           }
@@ -414,16 +436,29 @@
           ps.splice(i, 1); continue;
         }
       } else if (p.kind === 'missile') {
-        var t = findById(state, p.tId);
-        if (p.homing && t && !t.dead) {
-          var mdx = t.x - p.x, mdy = t.y - 6 - p.y;
-          var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
-          p.vx += (mdx / md * p.speed - p.vx) * 3 * dt;
-          p.vy += (mdy / md * p.speed - p.vy) * 3 * dt;
-        } else p.vy += 30 * dt;
-        p.x += p.vx * dt; p.y += p.vy * dt;
-        var hm = hitScanSurface(state, p, true);
-        if (hm || p.y >= 4) { if (hm) explode(state, p); else state.events.push({ type: 'splash', x: p.x, y: 0, size: 8 }); ps.splice(i, 1); continue; }
+        if (p.subRise) {
+          // rising out of the depths - drift toward the target's side but
+          // don't hit-test or resolve yet, same idea as the air-dropped
+          // torpedo's fall phase, just inverted
+          p.x += p.vx * 0.5 * dt;
+          p.y -= 100 * dt;
+          if (p.y <= 4) { p.subRise = false; p.y = 4; }
+        } else {
+          var t = findById(state, p.tId);
+          if (p.homing && t && !t.dead) {
+            var mdx = t.x - p.x, mdy = t.y - 6 - p.y;
+            var md = Math.sqrt(mdx * mdx + mdy * mdy) || 1;
+            p.vx += (mdx / md * p.speed - p.vx) * 3 * dt;
+            p.vy += (mdy / md * p.speed - p.vy) * 3 * dt;
+          } else p.vy += 30 * dt;
+          p.x += p.vx * dt; p.y += p.vy * dt;
+          var hm = hitScanSurface(state, p, true);
+          // only re-run the aoe/explode path for an actual unit hit - a
+          // direct base hit already applied its damage inside
+          // hitScanSurface, and calling explode() again here would splash
+          // the base a second time for the same shot
+          if (hm || p.y >= 4) { if (hm === 'unit') explode(state, p); else if (!hm) state.events.push({ type: 'splash', x: p.x, y: 0, size: 8 }); ps.splice(i, 1); continue; }
+        }
       } else if (p.kind === 'depthcharge') {
         p.x += p.vx * dt; p.vy = Math.min(p.vy + (p.y < 0 ? 100 : -20) * dt + 40 * dt, 80); p.y += p.vy * dt;
         if (p.y >= p.fuseY) { explodeAt(state, p, p.x, p.y); ps.splice(i, 1); continue; }
@@ -449,10 +484,10 @@
       if (u.type === 'air' && !missileMode) continue;
       var half = u.def.len / 2 + 4;
       var band = u.type === 'ship' ? (p.y > -26 && p.y < 6) : Math.abs(p.y - u.y) < 14;
-      if (Math.abs(p.x - u.x) < half && band) { damageUnit(state, u, p.dmg, p.x, p.y); return true; }
+      if (Math.abs(p.x - u.x) < half && band) { damageUnit(state, u, p.dmg, p.x, p.y); return 'unit'; }
     }
     var b = enemyBase(state, p.side);
-    if (Math.abs(p.x - b.x) < 80 && p.y > -70) { damageBase(state, b, p.dmg, p.x, p.y); state.events.push({ type: 'explosion', x: p.x, y: p.y, size: 14 }); return true; }
+    if (Math.abs(p.x - b.x) < 80 && p.y > -70) { damageBase(state, b, p.dmg, p.x, p.y); state.events.push({ type: 'explosion', x: p.x, y: p.y, size: 14 }); return 'base'; }
     return false;
   }
 
@@ -499,6 +534,17 @@
       var dx = Math.abs(u.x - x), dy = Math.abs(u.y - y);
       var r = (p.aoe || 20) + u.def.len / 2;
       if (dx < r && dy < (p.aoe || 20) + 16) damageUnit(state, u, p.dmg * (1 - dx / (r + 1) * 0.5), u.x, u.y);
+    }
+    // an aoe blast that lands close enough to the enemy base also chips
+    // it, same falloff as the unit splash above - lets a long-range aoe
+    // weapon's hit occasionally reach the base when its actual (unchanged)
+    // target happened to be standing near it, without ever changing which
+    // unit gets targeted in the first place
+    var wdefB = WEAPONS[p.wkey];
+    if (wdefB && wdefB.targets.base && p.aoe) {
+      var b = enemyBase(state, p.side);
+      var dxb = Math.abs(b.x - x), rb = p.aoe + 60;
+      if (dxb < rb && y > -70) damageBase(state, b, p.dmg * (1 - dxb / (rb + 1) * 0.5), x, y);
     }
   }
 
@@ -547,14 +593,22 @@
           var rel = (tgtA.x - u.x) * u.dir;
           if (rel < -120 && u.passT <= 0) { u.dir *= -1; u.passT = 2.5; }
         } else if (standoff) {
-          // drift toward wherever the fight is, but with nothing detected
-          // yet, never advance alone past a safe cap tied to the actual
-          // danger zone (max weapon range in the game is 780, so 850 gives
-          // a firm buffer) - not an arbitrary map fraction, which left
-          // bombers idling far behind a front line that had moved further
-          // up than the old cap allowed
-          var safeCap = u.side === 'L' ? WORLD - 850 : 850;
-          if ((u.side === 'L' && u.x >= safeCap) || (u.side === 'R' && u.x <= safeCap)) move = false;
+          // no weapon-valid (ship/base) target yet, but if there's ANY
+          // enemy presence already within reach - subs, aircraft, whatever
+          // it can't itself fire on - that's still a sign the front is
+          // right here, so settle instead of continuing to creep forward
+          // every tick until it reaches the far safety cap
+          var anyNear = nearestAnyEnemyUnit(state, u, u.def.minDist + 400);
+          if (anyNear) {
+            move = false;
+          } else {
+            // genuinely nothing around at all - drift toward wherever the
+            // fight is, but never advance alone past a safe cap tied to the
+            // actual danger zone (max weapon range in the game is 780, so
+            // 850 gives a firm buffer)
+            var safeCap = u.side === 'L' ? WORLD - 850 : 850;
+            if ((u.side === 'L' && u.x >= safeCap) || (u.side === 'R' && u.x <= safeCap)) move = false;
+          }
         } else if ((u.dir > 0 && u.x > ahead) || (u.dir < 0 && u.x < WORLD - ahead)) {
           if (u.side === 'L' && u.dir > 0 && u.x > WORLD - 300) { u.dir = -1; u.passT = 3; }
           else if (u.side === 'R' && u.dir < 0 && u.x < 300) { u.dir = 1; u.passT = 3; }
@@ -572,7 +626,8 @@
         else if (u.x > WORLD + 150) { u.x = WORLD + 150; u.dir = -1; u.passT = 3; }
         u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.bobPhase) * 8;
       } else {
-        var combatHold = engaged && holdDist <= Math.max(minD, 60);
+        var pushOverride = u.side === 'L' && state.allForwardT > 0;
+        var combatHold = engaged && holdDist <= Math.max(minD, 60) && !pushOverride;
         if (combatHold) move = false;
         // avoid overlapping an ally that's still transiting, but flow past
         // one that has stopped to fight - otherwise a single long-range
@@ -623,6 +678,22 @@
       var can = false;
       for (var w = 0; w < u.weapons.length; w++) if (WEAPONS[u.weapons[w].key].targets[e.type]) { can = true; break; }
       if (!can) continue;
+      var d = Math.abs(e.x - u.x);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+  }
+
+  // any live enemy unit regardless of type/weapon compatibility - used to
+  // tell a standoff aircraft "the front is near" even when the nearby
+  // enemy composition happens to be subs/aircraft it can't itself target,
+  // so it settles near the actual fight instead of only stopping once it
+  // reaches its outer safety cap
+  function nearestAnyEnemyUnit(state, u, maxD) {
+    var best = null, bestD = maxD;
+    for (var i = 0; i < state.units.length; i++) {
+      var e = state.units[i];
+      if (e.side === u.side || e.dead) continue;
       var d = Math.abs(e.x - u.x);
       if (d < bestD) { bestD = d; best = e; }
     }
@@ -858,6 +929,8 @@
     state.gold += state.income * dt;
     for (var k in state.buildCd) if (state.buildCd[k] > 0) state.buildCd[k] -= dt;
     if (state.playerGunCool > 0) state.playerGunCool -= dt;
+    if (state.allForwardT > 0) state.allForwardT -= dt;
+    if (state.allForwardCool > 0) state.allForwardCool -= dt;
     stepB52(state, dt);
     stepEnemy(state, dt);
     stepUnits(state, dt);
@@ -872,6 +945,7 @@
     createMatch: createMatch, step: step,
     tryBuild: tryBuild, tryUpgrade: tryUpgrade, upgradeCost: upgradeCost,
     buildCooldown: buildCooldown, unitUnlocked: unitUnlocked, autoPlay: autoPlay,
-    adjustAim: adjustAim, fireBattery: fireBattery, fireB52: fireB52, B52_COOLDOWN: B52_COOLDOWN
+    adjustAim: adjustAim, fireBattery: fireBattery, fireB52: fireB52, B52_COOLDOWN: B52_COOLDOWN,
+    triggerAllForward: triggerAllForward, ALLFORWARD_COOLDOWN: ALLFORWARD_COOLDOWN, ALLFORWARD_DURATION: ALLFORWARD_DURATION
   };
 });

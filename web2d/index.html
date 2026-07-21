@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.003';
+var GAME_VERSION = 'v1.005';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -134,6 +134,11 @@ function triggerB52() {
   if (S.fireB52(st)) { sfx('b52launch'); audio(); } else sfx('deny');
 }
 
+function triggerAllForward() {
+  if (!st || st.result) return;
+  if (S.triggerAllForward(st)) { sfx('upgrade'); audio(); } else sfx('deny');
+}
+
 // ---------- start match
 function startStage(i) {
   stageIdx = i;
@@ -199,6 +204,7 @@ window.addEventListener('keydown', function (e) {
   if (k === ' ') { if (!e.repeat) batteryFiring = !batteryFiring; e.preventDefault(); }
   if (k === 'arrowup' || k === 'arrowdown') e.preventDefault();
   if (k === 't' && !AUTO) triggerB52();
+  if (k === 'g' && !AUTO) triggerAllForward();
   if (k === 'escape') { mode = 'title'; }
   audio();
 });
@@ -425,10 +431,14 @@ function shipStackOffset(u) {
   var idx = 0, count = 0;
   for (var i = 0; i < st.units.length; i++) {
     var o = st.units[i];
-    // same grouping the sim's own collision-avoidance uses (a.type !== u.type) -
-    // regular and nuclear submarines share type 'sub', so they mass together
-    // the same way different ship classes do, and need the same stagger
-    if (o.side !== u.side || o.type !== u.type || o.dead) continue;
+    if (o.side !== u.side || o.dead) continue;
+    // ships/subs group by type (a.type !== u.type) - regular and nuclear
+    // submarines share type 'sub', so they mass together the same way
+    // different ship classes do. Aircraft group by exact unit instead, so
+    // a stack of long-range bombers doesn't have its offset perturbed by
+    // an unrelated fighter or helicopter passing through the same spot.
+    var sameGroup = u.type === 'air' ? (o.unit === u.unit) : (o.type === u.type);
+    if (!sameGroup) continue;
     if (Math.abs(o.x - u.x) < 22) { if (o.id < u.id) idx++; count++; }
   }
   if (count <= 1) return 0;
@@ -444,7 +454,7 @@ function drawUnit(u, t) {
   // tactic, allowed for both sides) would otherwise render as one
   // indistinguishable blob - nudge overlapping same-side ships apart on
   // screen only, purely cosmetic, doesn't touch position/combat/hit tests
-  if (u.type === 'ship' || u.type === 'sub') y += shipStackOffset(u) * s;
+  if (u.type === 'ship' || u.type === 'sub' || (u.type === 'air' && u.def.minDist >= 700)) y += shipStackOffset(u) * s;
   if (x < -160 || x > W + 160) return;
   ctx.save();
   ctx.translate(x, y);
@@ -912,7 +922,7 @@ function mobileDockRect() {
 function mobileAimRect() {
   var dock = mobileDockRect();
   var row1h = 46;
-  var rightW = 176; // fire + b52 buttons + gaps
+  var rightW = 254; // fire + b52 + all-forward buttons + gaps
   return { x: 8, y: dock.y + 6, w: Math.max(90, W - 16 - rightW), h: row1h - 8 };
 }
 function mobileFireRect() {
@@ -922,6 +932,10 @@ function mobileFireRect() {
 function mobileB52Rect() {
   var fire = mobileFireRect();
   return { x: fire.x + fire.w + 8, y: fire.y, w: 82, h: fire.h };
+}
+function mobileAllForwardRect() {
+  var b52 = mobileB52Rect();
+  return { x: b52.x + b52.w + 8, y: b52.y, w: 70, h: b52.h };
 }
 function mobileTabRect(which) {
   var dock = mobileDockRect();
@@ -1021,9 +1035,11 @@ function drawMobileDock(t) {
   ctx.fillText(firing ? '🔥 FIRING' : '⏹ HOLD', fire.x + fire.w / 2, fire.y + fire.h / 2 + 4);
   uiButtons.push({ x: fire.x, y: fire.y, w: fire.w, h: fire.h, cb: function () { batteryFiring = !batteryFiring; } });
 
-  // B-52 button (reuse desktop's drawB52Button, it already pushes its own uiButton)
+  // B-52 + all-forward buttons (reuse desktop's draw fns, they push their own uiButtons)
   var b52 = mobileB52Rect();
   drawB52Button(b52.x, b52.y, b52.w, b52.h, b52.w >= 68);
+  var allf = mobileAllForwardRect();
+  drawAllForwardButton(allf.x, allf.y, allf.w, allf.h, allf.w >= 68);
 
   // tabs
   ['build', 'upgrade'].forEach(function (tab) {
@@ -1158,7 +1174,7 @@ function drawHUD(t) {
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · SPACE stop/start · T: B-52 strike · Esc quit', 14, H - (AUTO ? 12 : buildBarHeight() + 44));
+  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · SPACE stop/start · T: B-52 strike · G: push forward · Esc quit', 14, H - (AUTO ? 12 : buildBarHeight() + 44));
   if (!AUTO) drawBuildBar(t);
 }
 
@@ -1189,7 +1205,7 @@ function drawSecondRow() {
     x += bw1 + 6;
   }
   var remaining = Math.max(0, W - x - 14);
-  var btnW = Math.max(30, Math.min(90, remaining / 4 - 6));
+  var btnW = Math.max(30, Math.min(90, remaining / 5 - 6));
   var wide = btnW >= 68;
   ctlButton(x, y, btnW, h, paused ? (wide ? '▶ RESUME' : '▶') : (wide ? '⏸ PAUSE' : '⏸'), paused, function () { paused = !paused; });
   x += btnW + 4;
@@ -1198,6 +1214,8 @@ function drawSecondRow() {
   ctlButton(x, y, btnW, h, muted ? '🔇' : '🔊', muted, function () { muted = !muted; });
   x += btnW + 4;
   drawB52Button(x, y, btnW, h, wide);
+  x += btnW + 4;
+  drawAllForwardButton(x, y, btnW, h, wide);
 }
 function drawB52Button(x, y, w, h, wide) {
   var ready = st.b52Cool <= 0;
@@ -1216,6 +1234,26 @@ function drawB52Button(x, y, w, h, wide) {
   ctx.textAlign = 'center';
   ctx.fillText(label, x + w / 2, y + h / 2 + 4);
   uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { triggerB52(); } });
+}
+function drawAllForwardButton(x, y, w, h, wide) {
+  var active = st.allForwardT > 0;
+  var ready = st.allForwardCool <= 0;
+  var label = active ? (wide ? '▲ PUSHING ' + Math.ceil(st.allForwardT) + 's' : '▲' + Math.ceil(st.allForwardT))
+    : ready ? (wide ? '▲ FORWARD (G)' : '▲') : Math.ceil(st.allForwardCool) + 's';
+  ctx.fillStyle = active ? 'rgba(70,150,90,0.9)' : ready ? 'rgba(60,90,130,0.9)' : 'rgba(16,24,34,0.85)';
+  ctx.fillRect(x, y, w, h);
+  if (!ready && !active) {
+    var frac = 1 - st.allForwardCool / S.ALLFORWARD_COOLDOWN;
+    ctx.fillStyle = 'rgba(60,90,130,0.45)';
+    ctx.fillRect(x, y, w * frac, h);
+  }
+  ctx.strokeStyle = active ? '#8adba0' : ready ? '#7ea8e0' : 'rgba(120,160,200,0.6)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = active ? '#e0ffe6' : ready ? '#e0ecff' : '#cfe4f8';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 4);
+  uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { triggerAllForward(); } });
 }
 function ctlButton(x, y, w, h, label, active, cb) {
   ctx.fillStyle = active ? 'rgba(90,140,190,0.85)' : 'rgba(16,24,34,0.85)';
