@@ -202,10 +202,25 @@
   var ALLFORWARD_COOLDOWN = 60;
   var ALLFORWARD_DURATION = 14;
 
+  var ALLFORWARD_NUDGE = 100;
+
   function triggerAllForward(state) {
     if (state.allForwardCool > 0) return false;
     state.allForwardT = ALLFORWARD_DURATION;
     state.allForwardCool = ALLFORWARD_COOLDOWN;
+    // an immediate, unconditional nudge - every unit type (fighter,
+    // helicopter, torpedo bomber, standoff aircraft, sub, ship) has its
+    // own separate movement/hold logic, and not all of them check the
+    // sustained override below; a direct nudge guarantees every unit
+    // actually moves the instant the button is pressed instead of some
+    // planes "staying behind for no reason" because their particular
+    // patrol logic didn't notice the push in time.
+    for (var i = 0; i < state.units.length; i++) {
+      var u = state.units[i];
+      if (u.side !== 'L' || u.dead) continue;
+      u.x += ALLFORWARD_NUDGE;
+      if (u.type !== 'air') u.x = Math.max(60, Math.min(WORLD - 60, u.x));
+    }
     return true;
   }
   var B52_BOMB_DMG = 900; // ~50% of a carrier's 1800 hp per direct hit
