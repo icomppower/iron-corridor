@@ -603,8 +603,15 @@
           // weapon ranges), otherwise always keep advancing toward the
           // front. No separate drift/cap logic - that patchwork kept
           // leaving it stalled short of wherever the fight actually was.
-          var pushOverride2 = u.side === 'L' && state.allForwardT > 0;
-          var airHold = engaged && holdDist <= Math.max(minD, 60) && !pushOverride2;
+          // Deliberately does NOT honor the sustained push override ships/
+          // subs use below: with a stand-off range this large (900), 14
+          // seconds of forced advance (up to ~1260 units at its speed)
+          // flies it straight through any target and hundreds of units
+          // past the whole enemy formation, leaving it isolated with
+          // nothing left to engage. The instant nudge from the push button
+          // (triggerAllForward) already moves it a sensible amount; its
+          // own hold logic should resume normally right after that.
+          var airHold = engaged && holdDist <= Math.max(minD, 60);
           if (airHold) move = false;
           if (move) u.x += u.dir * u.speed * dt;
           u.holding = airHold;

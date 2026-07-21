@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.009';
+var GAME_VERSION = 'v1.010';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -437,11 +437,9 @@ function drawRangeRuler() {
     ctx.moveTo(sx, y0 - (isMajor ? 10 : 5));
     ctx.lineTo(sx, y0 + (isMajor ? 10 : 5));
     ctx.stroke();
-    if (isMajor) {
-      ctx.font = 'bold 10px monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillText(dist, sx, y0 + 24);
-    }
+    ctx.font = isMajor ? 'bold 10px monospace' : '8px monospace';
+    ctx.fillStyle = isMajor ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)';
+    ctx.fillText(dist, sx, y0 + (isMajor ? 24 : 14));
   }
 }
 function cloud(x, y, s) {
