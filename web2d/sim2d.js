@@ -578,50 +578,40 @@
       var minD = u.def.minDist || 0;
       var move = true;
       if (u.type === 'air') {
-        // aircraft fly passes; turn around past targets or near enemy base
         u.passT -= dt;
-        var ahead = u.dir > 0 ? WORLD - 260 : 260;
-        var tgtA = nearestAnyTarget(state, u);
-        // long-range standoff aircraft (minDist far beyond any weapon's
-        // range) must never fall into the ordinary fighter/bomber "no
-        // target found - cruise all the way to the enemy base and back"
-        // patrol, or it flies straight through its own safe standoff
-        // distance into the heart of enemy defenses and gets shredded.
-        // With nothing detected it should just hold instead of advancing.
         var standoff = u.def.minDist >= 700;
-        if (tgtA) {
-          var rel = (tgtA.x - u.x) * u.dir;
-          if (rel < -120 && u.passT <= 0) { u.dir *= -1; u.passT = 2.5; }
-        } else if (standoff) {
-          // no weapon-valid (ship/base) target yet, but if there's ANY
-          // enemy presence already within reach - subs, aircraft, whatever
-          // it can't itself fire on - that's still a sign the front is
-          // right here, so settle instead of continuing to creep forward
-          // every tick until it reaches the far safety cap
-          var anyNear = nearestAnyEnemyUnit(state, u, u.def.minDist + 400);
-          if (anyNear) {
-            move = false;
-          } else {
-            // genuinely nothing around at all - drift toward wherever the
-            // fight is, but never advance alone past a safe cap tied to the
-            // actual danger zone (max weapon range in the game is 780, so
-            // 850 gives a firm buffer)
-            var safeCap = u.side === 'L' ? WORLD - 850 : 850;
-            if ((u.side === 'L' && u.x >= safeCap) || (u.side === 'R' && u.x <= safeCap)) move = false;
+        if (standoff) {
+          // a long-range standoff unit is a mobile gun platform, not a
+          // patrolling fighter - it should behave exactly like a ship/sub:
+          // hold once genuinely engaged (the same engaged/holdDist this
+          // unit's own weapons already computed above, against its own
+          // weapon ranges), otherwise always keep advancing toward the
+          // front. No separate drift/cap logic - that patchwork kept
+          // leaving it stalled short of wherever the fight actually was.
+          var pushOverride2 = u.side === 'L' && state.allForwardT > 0;
+          var airHold = engaged && holdDist <= Math.max(minD, 60) && !pushOverride2;
+          if (airHold) move = false;
+          if (move) u.x += u.dir * u.speed * dt;
+          u.holding = airHold;
+        } else {
+          // aircraft fly passes; turn around past targets or near enemy base
+          var ahead = u.dir > 0 ? WORLD - 260 : 260;
+          var tgtA = nearestAnyTarget(state, u);
+          if (tgtA) {
+            var rel = (tgtA.x - u.x) * u.dir;
+            if (rel < -120 && u.passT <= 0) { u.dir *= -1; u.passT = 2.5; }
+          } else if ((u.dir > 0 && u.x > ahead) || (u.dir < 0 && u.x < WORLD - ahead)) {
+            if (u.side === 'L' && u.dir > 0 && u.x > WORLD - 300) { u.dir = -1; u.passT = 3; }
+            else if (u.side === 'R' && u.dir < 0 && u.x < 300) { u.dir = 1; u.passT = 3; }
           }
-        } else if ((u.dir > 0 && u.x > ahead) || (u.dir < 0 && u.x < WORLD - ahead)) {
-          if (u.side === 'L' && u.dir > 0 && u.x > WORLD - 300) { u.dir = -1; u.passT = 3; }
-          else if (u.side === 'R' && u.dir < 0 && u.x < 300) { u.dir = 1; u.passT = 3; }
+          // helicopters hover at minDist
+          if (u.def.minDist && tgtA && Math.abs(tgtA.x - u.x) < u.def.minDist) move = false;
+          if (move) u.x += u.dir * u.speed * dt;
         }
-        // helicopters hover at minDist
-        if (u.def.minDist && tgtA && Math.abs(tgtA.x - u.x) < u.def.minDist) move = false;
-        if (move) u.x += u.dir * u.speed * dt;
-        // safety net: with no target in range, the branches above only
-        // catch a plane overshooting into ENEMY territory - a plane flying
-        // home (no target found near its own base either) had nothing to
-        // turn it around and would fly off the map into the thousands
-        // indefinitely, permanently losing that unit for the rest of the
-        // match. Hard-bounce well past the intended patrol edge as a backstop.
+        // safety net: with no target in range, a plane could otherwise fly
+        // off the map into the thousands indefinitely and never return,
+        // permanently losing that unit for the rest of the match. Hard-
+        // bounce well past the intended patrol edge as a backstop.
         if (u.x < -150) { u.x = -150; u.dir = 1; u.passT = 3; }
         else if (u.x > WORLD + 150) { u.x = WORLD + 150; u.dir = -1; u.passT = 3; }
         u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.bobPhase) * 8;
@@ -678,22 +668,6 @@
       var can = false;
       for (var w = 0; w < u.weapons.length; w++) if (WEAPONS[u.weapons[w].key].targets[e.type]) { can = true; break; }
       if (!can) continue;
-      var d = Math.abs(e.x - u.x);
-      if (d < bestD) { bestD = d; best = e; }
-    }
-    return best;
-  }
-
-  // any live enemy unit regardless of type/weapon compatibility - used to
-  // tell a standoff aircraft "the front is near" even when the nearby
-  // enemy composition happens to be subs/aircraft it can't itself target,
-  // so it settles near the actual fight instead of only stopping once it
-  // reaches its outer safety cap
-  function nearestAnyEnemyUnit(state, u, maxD) {
-    var best = null, bestD = maxD;
-    for (var i = 0; i < state.units.length; i++) {
-      var e = state.units[i];
-      if (e.side === u.side || e.dead) continue;
       var d = Math.abs(e.x - u.x);
       if (d < bestD) { bestD = d; best = e; }
     }
