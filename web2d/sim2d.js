@@ -67,7 +67,10 @@
     richelieu:   { name: 'Richelieu',   hp: 7000,  speed: 21,   minDist: 400,  len: 140, weapons: ['g380', 'g380', 'g380', 'g380', 'aa', 'aa', 'aa'] },
     midway:      { name: 'Midway',      hp: 7500,  speed: 30.5, minDist: 900,  len: 150, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg'], hangar: 4, hangarUnit: 'mixed' },
     iowa:        { name: 'Iowa',        hp: 8000,  speed: 25,   minDist: 400,  len: 148, weapons: ['g406', 'g406', 'g406', 'aa', 'aa', 'mg'] },
-    yamato:      { name: 'Yamato',      hp: 10000, speed: 18,   minDist: 400,  len: 156, weapons: ['g460', 'g460', 'g460', 'g152', 'g152', 'aa', 'aa', 'aa'] }
+    yamato:      { name: 'Yamato',      hp: 10000, speed: 18,   minDist: 400,  len: 156, weapons: ['g460', 'g460', 'g460', 'g152', 'g152', 'aa', 'aa', 'aa'] },
+    // true endgame capstone - 30x Yamato's hp, a supercarrier that hangs
+    // back like Midway and keeps launching escort aircraft the whole fight
+    uss_enterprise: { name: 'USS Enterprise', hp: 300000, speed: 20, minDist: 900, len: 170, weapons: ['aa', 'aa', 'aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 6, hangarUnit: 'mixed' }
   };
 
   // ---- 9 stages: enemy spawn timers (seconds); pool for random extra pressure
@@ -94,7 +97,10 @@
       { interval: 16, jitter: 6, delay: 120, pool: ['patrol_ship', 'frigate', 'submarine', 'fighter'] }, 3),
     stg('Stage 9 — The Corridor', 'yamato',
       [['patrol_ship', 6, 8], ['frigate', 7, 12], ['submarine', 9, 20], ['helicopter', 13, 35], ['torpedo_bomber', 11, 40], ['fighter', 9, 25], ['destroyer', 16, 50], ['light_cruiser', 24, 75], ['heavy_cruiser', 30, 115], ['battleship', 50, 165]],
-      { interval: 12, jitter: 5, delay: 120, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship'] }, 3)
+      { interval: 12, jitter: 5, delay: 120, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship'] }, 3),
+    stg('Stage 10 — Enterprise Group', 'uss_enterprise',
+      [['patrol_ship', 5, 8], ['frigate', 6, 10], ['submarine', 8, 18], ['helicopter', 11, 30], ['torpedo_bomber', 9, 35], ['fighter', 7, 20], ['destroyer', 13, 45], ['light_cruiser', 20, 65], ['heavy_cruiser', 25, 100], ['battleship', 40, 150], ['carrier', 70, 220]],
+      { interval: 10, jitter: 5, delay: 100, pool: ['patrol_ship', 'frigate', 'submarine', 'helicopter', 'torpedo_bomber', 'fighter', 'destroyer', 'light_cruiser', 'heavy_cruiser', 'battleship', 'carrier'] }, 4)
   ];
 
   // ---- upgrades (player): [baseCost, growth, maxLvl]

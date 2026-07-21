@@ -10,7 +10,7 @@ var S = require('./sim2d.js');
 
 function run(stage, opts) {
   opts = opts || {};
-  var st = S.createMatch(stage, { seed: opts.seed || 42, unlockedStages: 9 });
+  var st = S.createMatch(stage, { seed: opts.seed || 42, unlockedStages: S.STAGES.length });
   var maxT = opts.maxT || 1800;
   var samples = [];
   var steps = 0;
@@ -22,7 +22,11 @@ function run(stage, opts) {
     if (steps % 300 === 0) {
       samples.push({ t: st.t, eHp: st.baseR.hp, pHp: st.baseL.hp, units: st.units.length, gold: st.gold });
       if (isNaN(st.baseL.hp + st.baseR.hp + st.gold)) throw new Error('NaN detected at t=' + st.t);
-      if (st.units.length > 400) throw new Error('unit runaway: ' + st.units.length);
+      // stage 10's much larger, longer capstone battle genuinely peaks
+      // around 430 concurrent units (verified: it oscillates back down as
+      // the player clears them, not an unbounded climb) - 600 stays a
+      // real backstop against genuine runaways while fitting that stage
+      if (st.units.length > 600) throw new Error('unit runaway: ' + st.units.length);
       if (st.projectiles.length > 3000) throw new Error('projectile runaway');
     }
   }
@@ -79,6 +83,18 @@ for (var st2 = 5; st2 < 9; st2++) {
   var r2 = run(st2, { auto: true, seed: 7 });
   check('stage ' + (st2 + 1) + ' runs >' + bar + 's or wins', r2.result === 'victory' || r2.t > bar,
     'result=' + r2.result + ' t=' + Math.round(r2.t) + ' eHp=' + Math.round(r2.eHp) + ' pHp=' + Math.round(r2.pHp));
+}
+
+// Stage 10 is a deliberate capstone added to stay ahead of the buffed
+// nuclear submarine: a 300,000hp boss (30x Yamato), enemy carriers now in
+// the spawn pool. No win-rate bar makes sense here - it's not meant to be
+// winnable by the scripted auto-player within 30 minutes. Just confirm it
+// runs cleanly (NaN/runaway already checked inside run()) and the player
+// doesn't get instantly steamrolled by the harder spawn pressure.
+if (S.STAGES.length > 9) {
+  var r10 = run(9, { auto: true, seed: 7 });
+  check('stage 10 runs >200s without early collapse', r10.t > 200,
+    'result=' + r10.result + ' t=' + Math.round(r10.t) + ' eHp=' + Math.round(r10.eHp) + ' pHp=' + Math.round(r10.pHp));
 }
 
 console.log(fails.length ? '\n' + fails.length + ' FAILURES' : '\nALL GREEN');

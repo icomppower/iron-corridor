@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.010';
+var GAME_VERSION = 'v1.011';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -37,7 +37,7 @@ var isMobile = (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 
 
 // ---------- persistence
 function loadProgress() {
-  try { return Math.max(1, Math.min(9, parseInt(localStorage.getItem('ic2d_unlocked') || '1', 10))); } catch (e) { return 1; }
+  try { return Math.max(1, Math.min(S.STAGES.length, parseInt(localStorage.getItem('ic2d_unlocked') || '1', 10))); } catch (e) { return 1; }
 }
 function saveProgress(n) { try { localStorage.setItem('ic2d_unlocked', String(n)); } catch (e) {} }
 var unlocked = loadProgress();
@@ -225,7 +225,7 @@ function tryUpgradeUI(key) {
   if (S.tryUpgrade(st, key)) sfx('upgrade'); else sfx('deny');
 }
 function handleEndKey() {
-  if (mode === 'victory' && stageIdx + 1 < 9) startStage(stageIdx + 1);
+  if (mode === 'victory' && stageIdx + 1 < S.STAGES.length) startStage(stageIdx + 1);
   else mode = 'title';
 }
 
@@ -1527,11 +1527,12 @@ function drawTitle(t) {
   ctx.textAlign = 'center';
 
   // stage grid
-  var cols = Math.min(9, Math.max(3, Math.floor(W / 150)));
+  var stageCount = S.STAGES.length;
+  var cols = Math.min(stageCount, Math.max(3, Math.floor(W / 150)));
   var bw2 = Math.min(130, (W - 60) / cols - 10), bh2 = 74;
-  var rows = Math.ceil(9 / cols);
+  var rows = Math.ceil(stageCount / cols);
   var gx = (W - cols * (bw2 + 10)) / 2 + 5, gy = H * 0.42;
-  for (var i = 0; i < 9; i++) {
+  for (var i = 0; i < stageCount; i++) {
     var col = i % cols, row = Math.floor(i / cols);
     var x = gx + col * (bw2 + 10), y = gy + row * (bh2 + 10);
     var locked = i + 1 > unlocked;
@@ -1679,7 +1680,7 @@ function frame(ms) {
       overlayT = 0;
       if (st.result === 'victory') {
         sfx('victory');
-        if (stageIdx + 2 > unlocked) { unlocked = Math.min(9, stageIdx + 2); saveProgress(unlocked); }
+        if (stageIdx + 2 > unlocked) { unlocked = Math.min(S.STAGES.length, stageIdx + 2); saveProgress(unlocked); }
       } else sfx('defeat');
     }
   }
@@ -1718,7 +1719,7 @@ function frame(ms) {
   if (mode === 'victory' || mode === 'defeat') drawEndOverlay(t);
 }
 
-if (AUTO) startStage(Math.max(0, Math.min(8, qsStage ? qsStage - 1 : 0)));
+if (AUTO) startStage(Math.max(0, Math.min(S.STAGES.length - 1, qsStage ? qsStage - 1 : 0)));
 requestAnimationFrame(frame);
 </script>
 </body>
