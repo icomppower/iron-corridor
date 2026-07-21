@@ -37,7 +37,20 @@
     // reads fine as a heat ray) and a short-range claw/tail smash for when
     // it closes to melee. See BOSSES.godzilla.
     atombreath: { dmg: 230, reload: 4.0, range: 760, proj: 'shell', speed: 460, targets: { ship: 1, base: 1 } },
-    kaijuclaw:  { dmg: 300, reload: 2.0, range: 170, proj: 'shell', speed: 900, targets: { ship: 1 } }
+    // kaijuclaw only targets 'ship' (not sub/air/base) - traced via direct
+    // distance sampling across a full fight that the *nearest player ship*
+    // specifically (ignoring closer subs/aircraft it can't hit) never got
+    // under ~567 in a 100s window, well past any "true melee" range. A
+    // boss also shares type 'ship' with its own escort fleet (spawnUnit
+    // forces this for every BOSSES entry), so the same ally-traffic
+    // queueing that keeps escort ships from overlapping each other keeps
+    // godzilla queued up behind its own holding escorts too, capping how
+    // close it can actually get regardless of its low minDist (260). 700
+    // (just under atombreath's 760) is tuned to the range it can actually
+    // reach in practice rather than an aspirational melee number it would
+    // never hit - still fires faster (2.0s vs 4.0s reload) for higher
+    // sustained dps than atombreath alone.
+    kaijuclaw:  { dmg: 300, reload: 2.0, range: 700, proj: 'shell', speed: 900, targets: { ship: 1 } }
   };
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
@@ -619,7 +632,16 @@
         var wp = u.weapons[w], wdef = WEAPONS[wp.key];
         wp.cool -= dt;
         var maxR = Math.min(wdef.range, Math.max(u.def.detect, wdef.range * 0.6));
-        var tgt = nearestTargetFor(state, u, wdef, u.def.detect + 40);
+        // bosses (BOSSES entries) carry no detect stat at all, unlike every
+        // UNITS entry - u.def.detect is undefined there, so the +40 below
+        // silently produced NaN and nearestTargetFor's `d < bestD` compare
+        // was never true, i.e. no boss has ever actually fired its own
+        // weapons (Dreadnought through Enterprise, confirmed by tracing
+        // each boss-unique weapon key across a full post-spawn fight -
+        // zero projectiles). Escort units still fired, masking it. Falling
+        // back to the weapon's own range only changes anything for bosses;
+        // every UNITS entry already has a real detect and is untouched.
+        var tgt = nearestTargetFor(state, u, wdef, (u.def.detect || wdef.range) + 40);
         if (tgt) {
           var d = Math.abs(tgt.x - u.x);
           if (d <= wdef.range) {
