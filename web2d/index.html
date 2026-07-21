@@ -57,6 +57,12 @@ function scale() { return H / VIEW_H; }
 function seaY() { return H * SEA_FRAC; }
 function wx(x) { return (x - cam.x) * scale(); }
 function wy(y) { return seaY() + y * scale(); }
+// top-of-screen HUD (base bars/minimap/second-row) occupies roughly the
+// first 120px regardless of window height - a high-altitude aircraft (e.g.
+// the long-range bomber's alt:-210) can map to a y inside that band and
+// render invisibly underneath it. This is presentation-only: it never
+// touches u.y itself, which the sim still uses for hit-detection.
+var AIR_MIN_SCREEN_Y = 145;
 
 // ---------- effects / audio state
 var effects = [], wrecks = [], shakeT = 0, shakeMag = 0, bossBannerT = 0, bossBannerName = '';
@@ -450,6 +456,7 @@ function drawUnit(u, t) {
   var s = scale();
   var bob = (u.type === 'ship') ? Math.sin(t * 1.6 + u.id * 1.7) * 2 * s : 0;
   y = wy(u.y) + bob;
+  if (u.type === 'air') y = Math.max(y, AIR_MIN_SCREEN_Y);
   // massing many ships at one point (a deliberate concentrated-firepower
   // tactic, allowed for both sides) would otherwise render as one
   // indistinguishable blob - nudge overlapping same-side ships apart on

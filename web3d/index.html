@@ -465,7 +465,10 @@ function drawAircraftIcon(u, t) {
 function drawUnitOverlays() {
   for (var i = 0; i < st.units.length; i++) {
     var u = st.units[i];
-    var p = wxs(u.x, u.y, shipStackZ(u));
+    // mirror render3d's altitude clamp (AIR_MAX_WORLD_Y) so the HP bar/boss
+    // tag project to the same screen spot as the actual clamped mesh
+    var oy = u.type === 'air' ? Math.max(u.y, -R3.AIR_MAX_WORLD_Y) : u.y;
+    var p = wxs(u.x, oy, shipStackZ(u));
     if (p.behind || p.x < -60 || p.x > W + 60) continue;
     if (u.hp < u.maxHp) {
       var bw = Math.max(24, u.def.len * scale() * 0.6);

@@ -8,6 +8,12 @@ import * as THREE from './three.module.min.js';
 
 var renderer, scene, camera, W = 2, H = 2;
 var CAM_FOV = 40, CAM_H = 150, CAM_D = 560, CAM_LOOK_Y = -10;
+// the 2D canvas HUD overlay (base bars/minimap/second row) occupies the top
+// of the screen; a high-altitude aircraft (e.g. the long-range bomber's
+// alt:-210) can project up behind it and render invisibly. Cap the world
+// height used for the mesh only - never touches the sim's u.y, which still
+// drives hit-detection.
+export var AIR_MAX_WORLD_Y = 130;
 var sunLight, hemiLight, skyMat, sunSprite, seabed, waterMat, waterMesh;
 var clouds = [];
 var unitMeshes = {};   // sim unit id -> {group, refs, unit}
@@ -643,7 +649,8 @@ export function syncUnits(st, t, zOffsetFn) {
     var g = entry.group;
     var z = zOffsetFn ? zOffsetFn(u) : 0;
     var bob = u.type === 'ship' ? Math.sin(t * 1.6 + u.id * 1.7) * 1.6 : 0;
-    g.position.set(u.x, -u.y + bob + (u.type === 'ship' ? (g.userData.lift || 0) : 0), z);
+    var ay = u.type === 'air' ? Math.min(-u.y, AIR_MAX_WORLD_Y) : -u.y;
+    g.position.set(u.x, ay + bob + (u.type === 'ship' ? (g.userData.lift || 0) : 0), z);
     g.rotation.y = u.dir === 1 ? 0 : Math.PI;
     if (u.type === 'ship') g.rotation.x = Math.sin(t * 1.1 + u.id * 2.3) * 0.03;
     if (u.type === 'air') {
