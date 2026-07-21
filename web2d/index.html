@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.001';
+var GAME_VERSION = 'v1.002';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -148,8 +148,8 @@ function startStage(i) {
 
 // ---------- input
 var keys = {};
-var UNIT_KEYS = ['1','2','3','4','5','6','7','8','9','0','q','w','e','r'];
-var UNIT_ORDER = ['patrol_ship','frigate','submarine','fighter','torpedo_bomber','helicopter','destroyer','light_cruiser','heavy_cruiser','hybrid_cruiser','battleship','hybrid_battleship','carrier','atomic_submarine'];
+var UNIT_KEYS = ['1','2','3','4','5','6','7','8','9','0','q','w','e','r','y'];
+var UNIT_ORDER = ['patrol_ship','frigate','submarine','fighter','torpedo_bomber','helicopter','destroyer','light_cruiser','heavy_cruiser','hybrid_cruiser','battleship','hybrid_battleship','carrier','atomic_submarine','long_range_bomber'];
 var UPG_KEYS = ['z','x','c','v','b'];
 var UPG_ORDER = ['supply_line','salvage','arsenal','repair','fortress'];
 var UNIT_DESC = {
@@ -166,7 +166,8 @@ var UNIT_DESC = {
   battleship: 'Capital ship — 3x 381mm main guns, huge HP',
   hybrid_battleship: 'Battleship with a torpedo bomber hangar',
   carrier: 'Launches fighters & bombers automatically, AA-heavy',
-  atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile'
+  atomic_submarine: 'Deep-strike sub — dual torpedo + 3x missile',
+  long_range_bomber: 'Holds far outside all enemy fire, fires long-range missile'
 };
 var UPG_DESC = {
   supply_line: '+16 gold income per second, per level',
@@ -642,6 +643,14 @@ function drawAircraft(u, t) {
     if (u.unit === 'torpedo_bomber') {
       ctx.fillStyle = '#20262e';
       ctx.fillRect(-6, 4, 14, 3);
+    }
+    if (u.unit === 'long_range_bomber') {
+      // bigger, twin-tail heavy silhouette so it reads as a different class
+      ctx.fillStyle = hullColor(u);
+      ctx.fillRect(-19, -8, 8, 5);
+      ctx.fillRect(-19, 4, 8, 5);
+      ctx.fillStyle = upperColor(u);
+      ctx.fillRect(-3, -1.5, 20, 3);
     }
   }
 }

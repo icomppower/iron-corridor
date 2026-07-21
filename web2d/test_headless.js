@@ -56,14 +56,22 @@ for (var stage = 0; stage < 4; stage++) {
 }
 
 // 3. later stages at least reach boss (auto may lose 6-9, but must survive a while).
-// Stages 6, 8, 9 are the intentional end-game gauntlet: enemy reinforcements
-// no longer get stuck queued behind a stalled ally (fixed separately - they
-// used to pile up motionless instead of reaching the front), so the enemy is
-// now legitimately stronger and the scripted auto-player's real survival time
-// on these clusters naturally in the ~260-800s band across seeds, highly
-// seed-dependent. A straight 300s bar flakes depending on which seed lands in
-// the low end of that spread. 250s still catches genuine breakage (a collapse
-// to <100s) without being a coin flip. Stage 7 clears 300s comfortably on
+// Stages 6, 8, 9 are the intentional end-game gauntlet. Stage 9 in particular
+// is designed so its endless late-game reinforcement pool can outpace a
+// straightforward economy - before the long-range bomber was added, the
+// enemy base on 8/9 was provably unreachable (nearest-target selection
+// always preferred the endlessly-replenished standing army over the base,
+// so eHp never moved even a single point across a 30-minute run). The
+// bomber holds at a stand-off range beyond every weapon in the game, so it
+// can chip the base down without ever joining the front-line congestion.
+// Stage 8 now wins reliably with it; stage 9 (the hardest, final stage)
+// still doesn't guarantee a win for the scripted auto-player within 30
+// minutes, but makes real, sustained progress instead of none. Survival
+// time on these clusters naturally falls in the ~260-800s band across
+// seeds when the auto-player doesn't win outright, highly seed-dependent.
+// A straight 300s bar flakes depending on which seed lands in the low end
+// of that spread. 250s still catches genuine breakage (a collapse to
+// <100s) without being a coin flip. Stage 7 clears 300s comfortably on
 // every seed tried, so it keeps the tighter bar.
 var lateBar = [250, 300, 250, 250]; // stages 6,7,8,9
 for (var st2 = 5; st2 < 9; st2++) {

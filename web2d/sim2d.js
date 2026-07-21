@@ -30,7 +30,8 @@
     dc:    { dmg: 24,  reload: 4.0,  range: 250, proj: 'depthcharge', speed: 90, targets: { sub: 1 }, n: 4 },
     msl:   { dmg: 60,  reload: 3.2,  range: 700, proj: 'missile', speed: 210, targets: { ship: 1, air: 1, base: 1 } },
     fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 620, targets: { ship: 1 }, aoe: 55 },
-    btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } }
+    btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } },
+    lrm:   { dmg: 140, reload: 5.5,  range: 950, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 } }
   };
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
@@ -48,7 +49,12 @@
     battleship:       { name: 'Battleship',     type: 'ship', hp: 3400, speed: 29,  cost: 950,  cd: 25,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
     hybrid_battleship:{ name: 'Hybrid Battleship', type: 'ship', hp: 2250, speed: 29, cost: 1000, cd: 26, detect: 620, minDist: 400, len: 106, weapons: ['g381', 'g381', 'aa', 'aa', 'aa', 'mg'], hangar: 2, hangarUnit: 'torpedo_bomber', unlock: 6 },
     carrier:          { name: 'Carrier',        type: 'ship', hp: 1800, speed: 30,  cost: 1150, cd: 28,   detect: 800, minDist: 700, len: 120, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 3, hangarUnit: 'mixed' },
-    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 28,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 }
+    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 28,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 },
+    // holds at minDist 900 - beyond every weapon range in the game (max is
+    // 780, the yamato boss's g460) - so it never takes fire in exchange for
+    // a slow, single long-range missile. Player-only: never appears in any
+    // stage's spawn list, same pattern as the other unlock-gated units.
+    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 150, speed: 90, cost: 950, cd: 22, detect: 950, minDist: 900, len: 34, alt: -210, weapons: ['lrm'], unlock: 4 }
   };
 
   var BOSSES = {
@@ -529,9 +535,22 @@
         u.passT -= dt;
         var ahead = u.dir > 0 ? WORLD - 260 : 260;
         var tgtA = nearestAnyTarget(state, u);
+        // long-range standoff aircraft (minDist far beyond any weapon's
+        // range) must never fall into the ordinary fighter/bomber "no
+        // target found - cruise all the way to the enemy base and back"
+        // patrol, or it flies straight through its own safe standoff
+        // distance into the heart of enemy defenses and gets shredded.
+        // With nothing detected it should just hold instead of advancing.
+        var standoff = u.def.minDist >= 700;
         if (tgtA) {
           var rel = (tgtA.x - u.x) * u.dir;
           if (rel < -120 && u.passT <= 0) { u.dir *= -1; u.passT = 2.5; }
+        } else if (standoff) {
+          // drift toward wherever the fight is, but with nothing detected
+          // yet, never advance alone past a safe cap well short of the
+          // enemy base and its fortress guns
+          var safeCap = u.side === 'L' ? WORLD * 0.62 : WORLD * 0.38;
+          if ((u.side === 'L' && u.x >= safeCap) || (u.side === 'R' && u.x <= safeCap)) move = false;
         } else if ((u.dir > 0 && u.x > ahead) || (u.dir < 0 && u.x < WORLD - ahead)) {
           if (u.side === 'L' && u.dir > 0 && u.x > WORLD - 300) { u.dir = -1; u.passT = 3; }
           else if (u.side === 'R' && u.dir < 0 && u.x < 300) { u.dir = 1; u.passT = 3; }
@@ -539,6 +558,14 @@
         // helicopters hover at minDist
         if (u.def.minDist && tgtA && Math.abs(tgtA.x - u.x) < u.def.minDist) move = false;
         if (move) u.x += u.dir * u.speed * dt;
+        // safety net: with no target in range, the branches above only
+        // catch a plane overshooting into ENEMY territory - a plane flying
+        // home (no target found near its own base either) had nothing to
+        // turn it around and would fly off the map into the thousands
+        // indefinitely, permanently losing that unit for the rest of the
+        // match. Hard-bounce well past the intended patrol edge as a backstop.
+        if (u.x < -150) { u.x = -150; u.dir = 1; u.passT = 3; }
+        else if (u.x > WORLD + 150) { u.x = WORLD + 150; u.dir = -1; u.passT = 3; }
         u.y = (u.def.alt || -120) + Math.sin(state.t * 1.3 + u.bobPhase) * 8;
       } else {
         var combatHold = engaged && holdDist <= Math.max(minD, 60);
@@ -740,6 +767,7 @@
         if (u.type === 'ship') mine.surf++;
         if (u.maxHp > 1000) mine.big++;
         if (u.unit === 'destroyer' || u.unit === 'light_cruiser' || u.unit === 'heavy_cruiser') mine.escort = (mine.escort || 0) + 1;
+        if (u.unit === 'long_range_bomber') mine.bombers = (mine.bombers || 0) + 1;
       }
     }
     var baseDamaged = state.baseL.hp < state.baseL.maxHp * 0.97;   // chip damage: buy repair
@@ -778,6 +806,15 @@
     // banks toward upgrades instead of more units that would only queue up.
     var bigCap = 14;
     var capital = state.t > 210 ? 'battleship' : (state.t > 90 ? 'light_cruiser' : null);
+    // long-range bombers hold well outside the front line's engagement
+    // bubble, so unlike capital ships they never add to the congestion
+    // that caps the front - but they must never outbid capital-ship/
+    // defense spending, only mop up gold that would otherwise sit idle.
+    var bomberCap = 24;
+    function tryBomber() {
+      return unitUnlocked(state, 'long_range_bomber') && (mine.bombers || 0) < bomberCap &&
+        state.gold >= UNITS.long_range_bomber.cost && tryBuild(state, 'long_range_bomber');
+    }
     if (state.stageIdx >= 6 && state.t > 300 && mine.big > 1 && mine.big < bigCap && state.gold >= UNITS.carrier.cost) {
       if (tryBuild(state, 'carrier')) return;
     }
@@ -792,7 +829,10 @@
       if (state.gold > UNITS.battleship.cost * 3 && (mine.escort || 0) < mine.big * 2 + 2) {
         if (tryBuild(state, 'light_cruiser') || tryBuild(state, 'destroyer')) return;
       }
-      // otherwise keep banking; only break for an actual base assault
+      // otherwise this gold would just sit idle - exactly what a bomber
+      // should soak up instead, since it never competes with the capital
+      // ship funding above and never congests the front line
+      if (tryBomber()) return;
       if (!baseCritical) return;
     }
     // defense only when the base is genuinely threatened (base guns handle campers and chip)
@@ -802,7 +842,8 @@
       if (state.gold > UNITS.patrol_ship.cost + 40) { tryBuild(state, 'patrol_ship'); return; }
     }
     // light early skirmish so the enemy doesn't snowball for free
-    if (state.t < 90 && mine.surf < 3 && state.gold > UNITS.patrol_ship.cost + 60) tryBuild(state, 'patrol_ship');
+    if (state.t < 90 && mine.surf < 3 && state.gold > UNITS.patrol_ship.cost + 60) { tryBuild(state, 'patrol_ship'); return; }
+    tryBomber();
   }
 
   // ---------- main step
