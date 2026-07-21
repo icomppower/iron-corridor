@@ -15,7 +15,7 @@
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.005';
+var GAME_VERSION = 'v1.006';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -413,6 +413,36 @@ function drawBackground(t, stage) {
   // subsurface light bands
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
   for (var b = 1; b <= 3; b++) ctx.fillRect(0, seaY() + px(30 * b), W, 2);
+}
+// distance-from-home-base ruler along the waterline, so a screenshot can be
+// read off directly for bug reports ("bomber engaged around 2400") instead
+// of guessing - matches the same "distance from own base" convention the
+// game already uses internally (battery aim range, weapon ranges, minDist)
+function drawRangeRuler() {
+  if (!st) return;
+  var y0 = seaY();
+  var minor = 200, major = 1000;
+  var viewW = W / scale();
+  var startX = Math.floor(cam.x / minor) * minor;
+  var endX = cam.x + viewW + minor;
+  ctx.textAlign = 'center';
+  for (var wxPos = startX; wxPos <= endX; wxPos += minor) {
+    var sx = wx(wxPos);
+    if (sx < -20 || sx > W + 20) continue;
+    var isMajor = Math.round(wxPos) % major === 0;
+    var dist = Math.round(wxPos - st.baseL.x);
+    ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx, y0 - (isMajor ? 10 : 5));
+    ctx.lineTo(sx, y0 + (isMajor ? 10 : 5));
+    ctx.stroke();
+    if (isMajor) {
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillText(dist, sx, y0 + 24);
+    }
+  }
 }
 function cloud(x, y, s) {
   ctx.beginPath();
@@ -1669,6 +1699,7 @@ function frame(ms) {
   ctx.save();
   ctx.translate(shx, shy);
   drawBackground(t, stageIdx);
+  drawRangeRuler();
   drawBase(st.baseL, 'L', t, stageIdx);
   drawBase(st.baseR, 'R', t, stageIdx);
   if (!AUTO) drawAimMarker();
