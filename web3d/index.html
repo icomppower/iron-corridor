@@ -13,19 +13,19 @@
 <body>
 <canvas id="gl"></canvas>
 <canvas id="c"></canvas>
-<script src="sim2d.js"></script>
+<script src="sim2d.js?v=1.001-3d"></script>
 <script>
   // deployed: sim2d.js is copied next to this file; local dev: fall back to the 2D folder
-  if (typeof Sim2D === 'undefined') document.write('<script src="../web2d/sim2d.js"><\/script>');
+  if (typeof Sim2D === 'undefined') document.write('<script src="../web2d/sim2d.js?v=1.001-3d"><\/script>');
 </script>
 <script type="module">
 'use strict';
 /* Iron Corridor 3D — shell/UI/audio. Sim logic is the untouched sim2d.js;
  * world rendering lives in render3d.js (Three.js). The HUD is drawn on a
  * transparent 2D canvas overlaid on the WebGL canvas. */
-import * as R3 from './render3d.js';
+import * as R3 from './render3d.js?v=1.001-3d';
 
-var GAME_VERSION = 'v1.000-3d';
+var GAME_VERSION = 'v1.001-3d';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var glCanvas = document.getElementById('gl');
@@ -47,7 +47,7 @@ var isMobile = (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 
 
 // ---------- persistence (shared with the 2D game: same unlock key)
 function loadProgress() {
-  try { return Math.max(1, Math.min(9, parseInt(localStorage.getItem('ic2d_unlocked') || '1', 10))); } catch (e) { return 1; }
+  try { return Math.max(1, Math.min(S.STAGES.length, parseInt(localStorage.getItem('ic2d_unlocked') || '1', 10))); } catch (e) { return 1; }
 }
 function saveProgress(n) { try { localStorage.setItem('ic2d_unlocked', String(n)); } catch (e) {} }
 var unlocked = loadProgress();
@@ -140,6 +140,11 @@ function triggerB52() {
   if (S.fireB52(st)) { sfx('b52launch'); audio(); } else sfx('deny');
 }
 
+function triggerAllForward() {
+  if (!st || st.result) return;
+  if (S.triggerAllForward(st)) { sfx('upgrade'); audio(); } else sfx('deny');
+}
+
 // ---------- start match
 function startStage(i) {
   stageIdx = i;
@@ -209,6 +214,7 @@ window.addEventListener('keydown', function (e) {
   if (k === ' ') { if (!e.repeat) batteryFiring = !batteryFiring; e.preventDefault(); }
   if (k === 'arrowup' || k === 'arrowdown') e.preventDefault();
   if (k === 't' && !AUTO) triggerB52();
+  if (k === 'g' && !AUTO) triggerAllForward();
   if (k === 'escape') { mode = 'title'; R3.clearMatch(); }
   audio();
 });
@@ -223,7 +229,7 @@ function tryUpgradeUI(key) {
   if (S.tryUpgrade(st, key)) sfx('upgrade'); else sfx('deny');
 }
 function handleEndKey() {
-  if (mode === 'victory' && stageIdx + 1 < 9) startStage(stageIdx + 1);
+  if (mode === 'victory' && stageIdx + 1 < S.STAGES.length) startStage(stageIdx + 1);
   else { mode = 'title'; R3.clearMatch(); }
 }
 
@@ -457,6 +463,35 @@ function drawAircraftIcon(u, t) {
       ctx.fillRect(-19, -8, 8, 5); ctx.fillRect(-19, 4, 8, 5);
       ctx.fillStyle = upperColor(u);
       ctx.fillRect(-3, -1.5, 20, 3);
+    }
+  }
+}
+
+// distance-from-home-base ruler along the waterline, projected through the
+// 3D camera (mirrors web2d's flat version) so a screenshot can be read off
+// directly for bug reports instead of guessing
+function drawRangeRuler() {
+  if (!st) return;
+  var minor = 100, major = 1000;
+  var viewSpan = viewWorld();
+  var startX = Math.floor(cam.x / minor) * minor;
+  var endX = cam.x + viewSpan + minor;
+  ctx.textAlign = 'center';
+  for (var wxPos = startX; wxPos <= endX; wxPos += minor) {
+    var p = wxs(wxPos, 0, 0);
+    if (p.behind || p.x < -20 || p.x > W + 20) continue;
+    var isMajor = Math.round(wxPos) % major === 0;
+    var dist = Math.round(wxPos - st.baseL.x);
+    ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - (isMajor ? 9 : 4));
+    ctx.lineTo(p.x, p.y + (isMajor ? 9 : 4));
+    ctx.stroke();
+    if (isMajor) {
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillText(dist, p.x, p.y + 22);
     }
   }
 }
@@ -737,7 +772,7 @@ function drawHUD(t) {
   ctx.font = '11px monospace';
   ctx.fillStyle = 'rgba(160,190,220,0.65)';
   ctx.textAlign = 'left';
-  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · SPACE stop/start · T: B-52 strike · Esc quit', 14, H - (AUTO ? 12 : buildBarHeight() + 44));
+  ctx.fillText('drag/wheel: scroll · ↑↓ aim battery · SPACE stop/start · T: B-52 strike · G: push forward · Esc quit', 14, H - (AUTO ? 12 : buildBarHeight() + 44));
   if (!AUTO) drawBuildBar(t);
 }
 
@@ -765,7 +800,7 @@ function drawSecondRow() {
     x += bw1 + 6;
   }
   var remaining = Math.max(0, W - x - 14);
-  var btnW = Math.max(30, Math.min(90, remaining / 4 - 6));
+  var btnW = Math.max(30, Math.min(90, remaining / 5 - 6));
   var wide = btnW >= 68;
   ctlButton(x, y, btnW, h, paused ? (wide ? '▶ RESUME' : '▶') : (wide ? '⏸ PAUSE' : '⏸'), paused, function () { paused = !paused; });
   x += btnW + 4;
@@ -774,6 +809,8 @@ function drawSecondRow() {
   ctlButton(x, y, btnW, h, muted ? '🔇' : '🔊', muted, function () { muted = !muted; });
   x += btnW + 4;
   drawB52Button(x, y, btnW, h, wide);
+  x += btnW + 4;
+  drawAllForwardButton(x, y, btnW, h, wide);
 }
 function drawB52Button(x, y, w, h, wide) {
   var ready = st.b52Cool <= 0;
@@ -792,6 +829,26 @@ function drawB52Button(x, y, w, h, wide) {
   ctx.textAlign = 'center';
   ctx.fillText(label, x + w / 2, y + h / 2 + 4);
   uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { triggerB52(); } });
+}
+function drawAllForwardButton(x, y, w, h, wide) {
+  var active = st.allForwardT > 0;
+  var ready = st.allForwardCool <= 0;
+  var label = active ? (wide ? '▲ PUSHING ' + Math.ceil(st.allForwardT) + 's' : '▲' + Math.ceil(st.allForwardT))
+    : ready ? (wide ? '▲ FORWARD (G)' : '▲') : Math.ceil(st.allForwardCool) + 's';
+  ctx.fillStyle = active ? 'rgba(70,150,90,0.9)' : ready ? 'rgba(60,90,130,0.9)' : 'rgba(16,24,34,0.85)';
+  ctx.fillRect(x, y, w, h);
+  if (!ready && !active) {
+    var frac = 1 - st.allForwardCool / S.ALLFORWARD_COOLDOWN;
+    ctx.fillStyle = 'rgba(60,90,130,0.45)';
+    ctx.fillRect(x, y, w * frac, h);
+  }
+  ctx.strokeStyle = active ? '#8adba0' : ready ? '#7ea8e0' : 'rgba(120,160,200,0.6)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = active ? '#e0ffe6' : ready ? '#e0ecff' : '#cfe4f8';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 4);
+  uiButtons.push({ x: x, y: y, w: w, h: h, cb: function () { triggerAllForward(); } });
 }
 function ctlButton(x, y, w, h, label, active, cb) {
   ctx.fillStyle = active ? 'rgba(90,140,190,0.85)' : 'rgba(16,24,34,0.85)';
@@ -1008,11 +1065,12 @@ function drawTitle(t) {
   ctx.fillText(GAME_VERSION, W - 8, H - 6);
   ctx.textAlign = 'center';
 
-  var cols = Math.min(9, Math.max(3, Math.floor(W / 150)));
+  var stageCount = S.STAGES.length;
+  var cols = Math.min(stageCount, Math.max(3, Math.floor(W / 150)));
   var bw2 = Math.min(130, (W - 60) / cols - 10), bh2 = 74;
-  var rows = Math.ceil(9 / cols);
+  var rows = Math.ceil(stageCount / cols);
   var gx = (W - cols * (bw2 + 10)) / 2 + 5, gy = H * 0.42;
-  for (var i = 0; i < 9; i++) {
+  for (var i = 0; i < stageCount; i++) {
     var col = i % cols, row = Math.floor(i / cols);
     var x = gx + col * (bw2 + 10), y = gy + row * (bh2 + 10);
     var locked = i + 1 > unlocked;
@@ -1068,7 +1126,7 @@ function drawEndOverlay(t) {
   ctx.fillStyle = '#cfe4f8';
   ctx.fillText(st.stage.name + '   ·   built ' + st.stats.built + '  kills ' + st.stats.kills + '  losses ' + st.stats.losses, W / 2, H * 0.36 + 40);
   var opts = [];
-  if (win && stageIdx + 1 < 9) opts.push(['NEXT STAGE ▸', function () { startStage(stageIdx + 1); }]);
+  if (win && stageIdx + 1 < S.STAGES.length) opts.push(['NEXT STAGE ▸', function () { startStage(stageIdx + 1); }]);
   if (!win) opts.push(['RETRY', function () { startStage(stageIdx); }]);
   opts.push(['STAGE SELECT', function () { mode = 'title'; R3.clearMatch(); }]);
   uiButtons.length = 0;
@@ -1161,7 +1219,7 @@ function frame(ms) {
       overlayT = 0;
       if (st.result === 'victory') {
         sfx('victory');
-        if (stageIdx + 2 > unlocked) { unlocked = Math.min(9, stageIdx + 2); saveProgress(unlocked); }
+        if (stageIdx + 2 > unlocked) { unlocked = Math.min(S.STAGES.length, stageIdx + 2); saveProgress(unlocked); }
       } else sfx('defeat');
     }
   }
@@ -1186,6 +1244,7 @@ function frame(ms) {
   R3.render(cam.x, shx, shy, t, dt);
 
   // HUD overlay
+  drawRangeRuler();
   drawUnitOverlays();
   if (bossBannerT > 0) bossBannerT -= dt;
   if (b52BannerT > 0) b52BannerT -= dt;
@@ -1195,7 +1254,7 @@ function frame(ms) {
 }
 
 window.__start = startStage; // debug/test hook
-if (AUTO) startStage(Math.max(0, Math.min(8, qsStage ? qsStage - 1 : 0)));
+if (AUTO) startStage(Math.max(0, Math.min(S.STAGES.length - 1, qsStage ? qsStage - 1 : 0)));
 requestAnimationFrame(frame);
 </script>
 </body>

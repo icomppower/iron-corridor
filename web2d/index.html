@@ -11,11 +11,11 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<script src="sim2d.js?v=1.012"></script>
+<script src="sim2d.js?v=1.013"></script>
 <script>
 'use strict';
 /* Iron Corridor 2D — renderer / UI / audio. Sim logic lives in sim2d.js (pure). */
-var GAME_VERSION = 'v1.012';
+var GAME_VERSION = 'v1.013';
 var S = Sim2D;
 var cv = document.getElementById('c'), ctx = cv.getContext('2d');
 var W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -1588,7 +1588,7 @@ function drawEndOverlay(t) {
   ctx.fillStyle = '#cfe4f8';
   ctx.fillText(st.stage.name + '   ·   built ' + st.stats.built + '  kills ' + st.stats.kills + '  losses ' + st.stats.losses, W / 2, H * 0.36 + 40);
   var opts = [];
-  if (win && stageIdx + 1 < 9) opts.push(['NEXT STAGE ▸', function () { startStage(stageIdx + 1); }]);
+  if (win && stageIdx + 1 < S.STAGES.length) opts.push(['NEXT STAGE ▸', function () { startStage(stageIdx + 1); }]);
   if (!win) opts.push(['RETRY', function () { startStage(stageIdx); }]);
   opts.push(['STAGE SELECT', function () { mode = 'title'; }]);
   uiButtons.length = 0;
