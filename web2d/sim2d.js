@@ -27,11 +27,12 @@
     g460:  { dmg: 160, reload: 3.4,  range: 780, proj: 'shell',  speed: 440, targets: { ship: 1, base: 1 } },
     torp:  { dmg: 95,  reload: 7.0,  range: 380, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1, base: 1 } },
     atorp: { dmg: 75,  reload: 6.0,  range: 300, proj: 'torpedo', speed: 110, targets: { ship: 1, base: 1 } },
+    ntorp: { dmg: 95,  reload: 7.0,  range: 550, proj: 'torpedo', speed: 110, targets: { ship: 1, sub: 1, base: 1 } },
     dc:    { dmg: 24,  reload: 4.0,  range: 250, proj: 'depthcharge', speed: 90, targets: { sub: 1 }, n: 4 },
     msl:   { dmg: 60,  reload: 3.2,  range: 700, proj: 'missile', speed: 210, targets: { ship: 1, air: 1, base: 1 } },
     fort:  { dmg: 90,  reload: 3.0,  range: 680, proj: 'shell',  speed: 620, targets: { ship: 1 }, aoe: 55 },
     btorp: { dmg: 95,  reload: 4.5,  range: 360, proj: 'torpedo', speed: 100, targets: { ship: 1, sub: 1 } },
-    lrm:   { dmg: 140, reload: 5.5,  range: 950, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 } }
+    lrm:   { dmg: 140, reload: 5.5,  range: 1000, proj: 'missile', speed: 240, targets: { ship: 1, base: 1 } }
   };
 
   // ---- units (hp/speed/detect/minDist from BNW:Re scene dump; cost/cd original)
@@ -49,12 +50,12 @@
     battleship:       { name: 'Battleship',     type: 'ship', hp: 3400, speed: 29,  cost: 950,  cd: 25,   detect: 620, minDist: 400, len: 110, weapons: ['g381', 'g381', 'g381', 'g152', 'g152', 'mg', 'mg', 'aa', 'aa', 'aa'] },
     hybrid_battleship:{ name: 'Hybrid Battleship', type: 'ship', hp: 2250, speed: 29, cost: 1000, cd: 26, detect: 620, minDist: 400, len: 106, weapons: ['g381', 'g381', 'aa', 'aa', 'aa', 'mg'], hangar: 2, hangarUnit: 'torpedo_bomber', unlock: 6 },
     carrier:          { name: 'Carrier',        type: 'ship', hp: 1800, speed: 30,  cost: 1150, cd: 28,   detect: 800, minDist: 700, len: 120, weapons: ['aa', 'aa', 'aa', 'aa', 'mg', 'mg', 'mg'], hangar: 3, hangarUnit: 'mixed' },
-    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 28,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['torp', 'torp', 'msl', 'msl', 'msl'], unlock: 8 },
+    atomic_submarine: { name: 'Atomic Submarine', type: 'sub', hp: 1200, speed: 24, cost: 1050, cd: 28,  detect: 800, minDist: 500, len: 96, depth: 78, weapons: ['ntorp', 'ntorp', 'msl', 'msl', 'msl'], unlock: 8 },
     // holds at minDist 900 - beyond every weapon range in the game (max is
     // 780, the yamato boss's g460) - so it never takes fire in exchange for
     // a slow, single long-range missile. Player-only: never appears in any
     // stage's spawn list, same pattern as the other unlock-gated units.
-    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 150, speed: 90, cost: 950, cd: 22, detect: 950, minDist: 900, len: 34, alt: -210, weapons: ['lrm'], unlock: 4 }
+    long_range_bomber: { name: 'Long-Range Bomber', type: 'air', hp: 150, speed: 90, cost: 950, cd: 22, detect: 1050, minDist: 900, len: 34, alt: -210, weapons: ['lrm'], unlock: 4 }
   };
 
   var BOSSES = {
@@ -547,9 +548,12 @@
           if (rel < -120 && u.passT <= 0) { u.dir *= -1; u.passT = 2.5; }
         } else if (standoff) {
           // drift toward wherever the fight is, but with nothing detected
-          // yet, never advance alone past a safe cap well short of the
-          // enemy base and its fortress guns
-          var safeCap = u.side === 'L' ? WORLD * 0.62 : WORLD * 0.38;
+          // yet, never advance alone past a safe cap tied to the actual
+          // danger zone (max weapon range in the game is 780, so 850 gives
+          // a firm buffer) - not an arbitrary map fraction, which left
+          // bombers idling far behind a front line that had moved further
+          // up than the old cap allowed
+          var safeCap = u.side === 'L' ? WORLD - 850 : 850;
           if ((u.side === 'L' && u.x >= safeCap) || (u.side === 'R' && u.x <= safeCap)) move = false;
         } else if ((u.dir > 0 && u.x > ahead) || (u.dir < 0 && u.x < WORLD - ahead)) {
           if (u.side === 'L' && u.dir > 0 && u.x > WORLD - 300) { u.dir = -1; u.passT = 3; }
