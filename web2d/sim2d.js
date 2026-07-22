@@ -113,7 +113,8 @@
     // deliberately low (closes to near-melee, unlike the stand-off carrier
     // bosses) so it reads as a monster wading in to smash the base rather
     // than another gunline ship. No hangar - it fights with its own body.
-    godzilla: { name: 'GODZILLA', hp: 480000, speed: 24, minDist: 260, len: 260, weapons: ['atombreath', 'atombreath', 'kaijuclaw', 'aa', 'aa'] }
+    // 3x the original 480,000 launch hp, per owner request
+    godzilla: { name: 'MEGA GODZILLA', hp: 1440000, speed: 24, minDist: 260, len: 260, weapons: ['atombreath', 'atombreath', 'kaijuclaw', 'aa', 'aa'] }
   };
 
   // ---- 9 stages: enemy spawn timers (seconds); pool for random extra pressure
